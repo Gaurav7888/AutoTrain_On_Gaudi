@@ -26,6 +26,7 @@ def train(config):
     logger.info("Starting default/generic CLM training...")
     if isinstance(config, dict):
         config = LLMTrainingParams(**config)
+    print("CONFIG: ", config)
     train_data, valid_data = utils.process_input_data(config)
     tokenizer = utils.get_tokenizer(config)
     train_data, valid_data = utils.process_data_with_chat_template(config, tokenizer, train_data, valid_data)
