@@ -79,6 +79,7 @@ task_to_keys = {
 def parse_args():
     # get training_config.json from the end user
     parser = argparse.ArgumentParser()
+    parser.add_argument("--training_config", type=str, required=True)
     return parser.parse_args()
 
 @dataclass
@@ -264,7 +265,7 @@ class ModelArguments:
     ) 
 
 
-# @monitor
+#@monitor
 def train(config):
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
     model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[2]))
@@ -408,18 +409,20 @@ def train(config):
     # )
 
     if model_args.mixed_precision == "fp16":
-        training_args["fp16"] = True
+        pass
+        #training_args["fp16"] = True
     if model_args.mixed_precision == "bf16":
-        training_args["bf16"] = True
+        pass
+        #training_args["bf16"] = True
 
-    if data_args.valid_split is not None:
-        early_stop = EarlyStoppingCallback(
-            early_stopping_patience=config.early_stopping_patience,
-            early_stopping_threshold=config.early_stopping_threshold,
-        )
-        callbacks_to_use = [early_stop]
-    else:
-        callbacks_to_use = []
+    # if data_args.valid_split is not None:
+    #     early_stop = EarlyStoppingCallback(
+    #         early_stopping_patience=config.early_stopping_patience,
+    #         early_stopping_threshold=config.early_stopping_threshold,
+    #     )
+    #     callbacks_to_use = [early_stop]
+    # else:
+    #     callbacks_to_use = []
 
     # callbacks_to_use.extend([UploadLogs(config=gaudi_training_args), LossLoggingCallback(), TrainStartCallback()])
 
@@ -460,7 +463,7 @@ def train(config):
         gaudi_config=gaudi_config,
         args=gaudi_training_args,
         train_dataset=train_data,
-        eval_dataset=test_data,
+        eval_dataset=valid_data,
         #compute_metrics=compute_metrics,
         tokenizer=tokenizer,
         #data_collator=data_collator,
@@ -507,5 +510,5 @@ def train(config):
 
 if __name__ == "__main__":
     args = parse_args()
-    training_config = json.load(open(args.training_config)
+    training_config = json.load(open(args.training_config))
     train(training_config)

@@ -13,12 +13,12 @@ from autotrain.trainers.object_detection.params import ObjectDetectionParams
 from autotrain.trainers.sent_transformers.params import SentenceTransformersParams
 from autotrain.trainers.seq2seq.params import Seq2SeqParams
 from autotrain.trainers.tabular.params import TabularParams
-from autotrain.trainers.text_classification.params import TextClassificationParams
+from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
 
 
-def launch_command(params):
+def launch_command(params, project_name):
     """
     Launches training command based on the given parameters.
 
@@ -31,7 +31,8 @@ def launch_command(params):
         None
     """
 
-    params.project_name = shlex.split(params.project_name)[0]
+    # params.project_name = shlex.split(params.project_name)[0]
+    # project_name = shlex.split(project_name)[0]
     cuda_available = torch.cuda.is_available()
     mps_available = torch.backends.mps.is_available()
     if cuda_available:
@@ -113,7 +114,7 @@ def launch_command(params):
                 "-m",
                 "autotrain.trainers.clm",
                 "--training_config",
-                os.path.join(params.project_name, "training_params.json"),
+                os.path.join(project_name, "training_params.json"),
             ]
         )
     elif isinstance(params, DreamBoothTrainingParams):
@@ -122,7 +123,7 @@ def launch_command(params):
             "-m",
             "autotrain.trainers.dreambooth",
             "--training_config",
-            os.path.join(params.project_name, "training_params.json"),
+            os.path.join(project_name, "training_params.json"),
         ]
     elif isinstance(params, GenericParams):
         cmd = [
@@ -130,7 +131,7 @@ def launch_command(params):
             "-m",
             "autotrain.trainers.generic",
             "--config",
-            os.path.join(params.project_name, "training_params.json"),
+            os.path.join(project_name, "training_params.json"),
         ]
     elif isinstance(params, TabularParams):
         cmd = [
@@ -138,75 +139,81 @@ def launch_command(params):
             "-m",
             "autotrain.trainers.tabular",
             "--training_config",
-            os.path.join(params.project_name, "training_params.json"),
+            os.path.join(project_name, "training_params.json"),
         ]
     elif (
         isinstance(params, TextClassificationParams)
         or isinstance(params, TextRegressionParams)
         or isinstance(params, SentenceTransformersParams)
+        or isinstance(params, TextClassificationGaudiParams)
     ):
-        if num_gpus == 0:
-            cmd = [
-                "accelerate",
-                "launch",
-                "--cpu",
-            ]
-        elif num_gpus == 1:
-            cmd = [
-                "accelerate",
-                "launch",
-                "--num_machines",
-                "1",
-                "--num_processes",
-                "1",
-            ]
-        else:
-            cmd = [
-                "accelerate",
-                "launch",
-                "--multi_gpu",
-                "--num_machines",
-                "1",
-                "--num_processes",
-                str(num_gpus),
-            ]
+        # if num_gpus == 0:
+        #     cmd = [
+        #         "accelerate",
+        #         "launch",
+        #         "--cpu",
+        #     ]
+        # elif num_gpus == 1:
+        #     cmd = [
+        #         "accelerate",
+        #         "launch",
+        #         "--num_machines",
+        #         "1",
+        #         "--num_processes",
+        #         "1",
+        #     ]
+        # else:
+        #     cmd = [
+        #         "accelerate",
+        #         "launch",
+        #         "--multi_gpu",
+        #         "--num_machines",
+        #         "1",
+        #         "--num_processes",
+        #         str(num_gpus),
+        #     ]
 
-        if num_gpus > 0:
-            cmd.append("--mixed_precision")
-            if params.mixed_precision == "fp16":
-                cmd.append("fp16")
-            elif params.mixed_precision == "bf16":
-                cmd.append("bf16")
-            else:
-                cmd.append("no")
+        # if num_gpus > 0:
+        #     cmd.append("--mixed_precision")
+        #     if params.mixed_precision == "fp16":
+        #         cmd.append("fp16")
+        #     elif params.mixed_precision == "bf16":
+        #         cmd.append("bf16")
+        #     else:
+        #         cmd.append("no")
 
-        if isinstance(params, TextRegressionParams):
-            cmd.extend(
-                [
-                    "-m",
-                    "autotrain.trainers.text_regression",
+        # if isinstance(params, TextRegressionParams):
+        #     cmd.extend(
+        #         [
+        #             "-m",
+        #             "autotrain.trainers.text_regression",
+        #             "--training_config",
+        #             os.path.join(project_name, "training_params.json"),
+        #         ]
+        #     )
+        # elif isinstance(params, SentenceTransformersParams):
+        #     cmd.extend(
+        #         [
+        #             "-m",
+        #             "autotrain.trainers.sent_transformers",
+        #             "--training_config",
+        #             os.path.join(project_name, "training_params.json"),
+        #         ]
+        #     )
+        # else:
+        #     cmd.extend(
+        #         [
+        #             "/root/gaurav/ui_autotrain/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/__main__.py",
+        #             "--training_config",
+        #             os.path.join(project_name, "training_params.json"),
+        #         ]
+        #     )
+        cmd =     [ "/usr/bin/python3",
+                    "/root/gaurav/ui_autotrain/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/__main__.py",
                     "--training_config",
-                    os.path.join(params.project_name, "training_params.json"),
+                    "/root/gaurav/ui_autotrain/AutoTrain_On_Gaudi/test-project/training_params.json"
                 ]
-            )
-        elif isinstance(params, SentenceTransformersParams):
-            cmd.extend(
-                [
-                    "-m",
-                    "autotrain.trainers.sent_transformers",
-                    "--training_config",
-                    os.path.join(params.project_name, "training_params.json"),
-                ]
-            )
-        else:
-            cmd.extend(
-                [
-                    "-m",
-                    "autotrain.trainers.text_classification",
-                    "--training_config",
-                    os.path.join(params.project_name, "training_params.json"),
-                ]
-            )
+        print("cmd-------------", cmd)
     elif isinstance(params, TokenClassificationParams):
         if num_gpus == 0:
             cmd = [
@@ -248,7 +255,7 @@ def launch_command(params):
                 "-m",
                 "autotrain.trainers.token_classification",
                 "--training_config",
-                os.path.join(params.project_name, "training_params.json"),
+                os.path.join(project_name, "training_params.json"),
             ]
         )
     elif (
@@ -297,7 +304,7 @@ def launch_command(params):
                     "-m",
                     "autotrain.trainers.object_detection",
                     "--training_config",
-                    os.path.join(params.project_name, "training_params.json"),
+                    os.path.join(project_name, "training_params.json"),
                 ]
             )
         elif isinstance(params, ImageRegressionParams):
@@ -306,7 +313,7 @@ def launch_command(params):
                     "-m",
                     "autotrain.trainers.image_regression",
                     "--training_config",
-                    os.path.join(params.project_name, "training_params.json"),
+                    os.path.join(project_name, "training_params.json"),
                 ]
             )
         else:
@@ -315,7 +322,7 @@ def launch_command(params):
                     "-m",
                     "autotrain.trainers.image_classification",
                     "--training_config",
-                    os.path.join(params.project_name, "training_params.json"),
+                    os.path.join(project_name, "training_params.json"),
                 ]
             )
     elif isinstance(params, Seq2SeqParams):
@@ -390,7 +397,7 @@ def launch_command(params):
                 "-m",
                 "autotrain.trainers.seq2seq",
                 "--training_config",
-                os.path.join(params.project_name, "training_params.json"),
+                os.path.join(project_name, "training_params.json"),
             ]
         )
 

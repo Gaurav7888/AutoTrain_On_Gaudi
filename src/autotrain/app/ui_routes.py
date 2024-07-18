@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
-from nvitop import Device
+#from nvitop import Device
 
 from autotrain import __version__, logger
 from autotrain.app.db import AutoTrainDB
@@ -279,6 +279,96 @@ UI_PARAMS = {
         "label": "Unsloth",
         "options": [True, False],
     },
+    "model_name_or_path": {
+        "type": "string",
+        "label": "Model name or path",
+    },
+    "backend": {
+        "type": "string",
+        "label": "Backend",
+    },
+    "dataset_name": {
+        "type": "string",
+        "label": "Dataset name",
+    },
+    "train_split": {
+        "type": "string",
+        "label": "Train split",
+    },
+    "valid_split": {
+        "type": "string",
+        "label": "Validation split",
+    },
+    "column_mapping_text_column": {
+        "type": "string",
+        "label": "Column mapping text column",
+    },
+    "column_mapping_target_column": {
+        "type": "string",
+        "label": "Column mapping target column",
+    },
+    "max_seq_length": {
+        "type": "number",
+        "label": "Max sequence length",
+    },
+    "num_train_epochs": {
+        "type": "number",
+        "label": "Number of training epochs",
+    },
+    "per_device_train_batch_size": {
+        "type": "number",
+        "label": "Per device training batch size",
+    },
+    "learning_rate": {
+        "type": "number",
+        "label": "Learning rate",
+    },
+    "optim": {
+        "type": "string",
+        "label": "Optimizer",
+    },
+    "lr_scheduler_type": {
+        "type": "string",
+        "label": "Learning rate scheduler type",
+    },
+    "gradient_accumulation_steps": {
+        "type": "number",
+        "label": "Gradient accumulation steps",
+    },
+    "mixed_precision": {
+        "type": "string",
+        "label": "Mixed precision",
+    },
+    "use_habana": {
+        "type": "dropdown",
+        "label": "Use Habana device",
+        "options": [True, False],
+    },
+    "use_hpu_graphs": {
+        "type": "dropdown",
+        "label": "Use HPU Graphs",
+        "options": [True, False],
+    },
+     "use_hpu_graphs_for_training": {
+        "type": "dropdown",
+        "label": "Use HPU Graphs for Training",
+        "options": [True, False],
+    },
+    "use_hpu_graphs_for_inference": {
+        "type": "dropdown",
+        "label": "Use HPU Graphs for Inference",
+        "options": [True, False],
+    },
+    "non_blocking_data_copy": {
+        "type": "dropdown",
+        "label": "Non-blocking Data Copy",
+        "options": [True, False],
+    },
+    "evaluation_strategy": {
+        "type": "string",
+        "label": "Evalutaion strategy",
+    },
+
 }
 
 
