@@ -142,11 +142,12 @@ def launch_command(params, project_name):
             os.path.join(project_name, "training_params.json"),
         ]
     elif (
-        isinstance(params, TextClassificationParams)
-        or isinstance(params, TextRegressionParams)
+        isinstance(params, TextRegressionParams)
         or isinstance(params, SentenceTransformersParams)
         or isinstance(params, TextClassificationGaudiParams)
     ):
+        # TODO: Add support to make this configurable
+        #
         # if num_gpus == 0:
         #     cmd = [
         #         "accelerate",
@@ -182,38 +183,36 @@ def launch_command(params, project_name):
         #     else:
         #         cmd.append("no")
 
-        # if isinstance(params, TextRegressionParams):
-        #     cmd.extend(
-        #         [
-        #             "-m",
-        #             "autotrain.trainers.text_regression",
-        #             "--training_config",
-        #             os.path.join(project_name, "training_params.json"),
-        #         ]
-        #     )
-        # elif isinstance(params, SentenceTransformersParams):
-        #     cmd.extend(
-        #         [
-        #             "-m",
-        #             "autotrain.trainers.sent_transformers",
-        #             "--training_config",
-        #             os.path.join(project_name, "training_params.json"),
-        #         ]
-        #     )
-        # else:
-        #     cmd.extend(
-        #         [
-        #             "/root/gaurav/ui_autotrain/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/__main__.py",
-        #             "--training_config",
-        #             os.path.join(project_name, "training_params.json"),
-        #         ]
-        #     )
-        cmd =     [ "/usr/bin/python3",
-                    "/root/gaurav/ui_autotrain/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/__main__.py",
+
+        cmd = ["python3"]
+        
+        if isinstance(params, TextRegressionParams):
+            cmd.extend(
+                [
+                    "-m",
+                    "autotrain.trainers.text_regression",
                     "--training_config",
-                    "/root/gaurav/ui_autotrain/AutoTrain_On_Gaudi/test-project/training_params.json"
+                    os.path.join(project_name, "training_params.json"),
                 ]
-        print("cmd-------------", cmd)
+            )
+        elif isinstance(params, SentenceTransformersParams):
+            cmd.extend(
+                [
+                    "-m",
+                    "autotrain.trainers.sent_transformers",
+                    "--training_config",
+                    os.path.join(project_name, "training_params.json"),
+                ]
+            )
+        else:
+            cmd.extend(
+                [
+                    "-m"
+                    "autotrain.trainers.text_classification",
+                    "--training_config",
+                    os.path.join(project_name, "training_params.json"),
+                ]
+            )
     elif isinstance(params, TokenClassificationParams):
         if num_gpus == 0:
             cmd = [
