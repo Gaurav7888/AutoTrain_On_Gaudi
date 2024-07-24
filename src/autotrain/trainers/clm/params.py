@@ -10,6 +10,7 @@ class LLMTrainingParams(AutoTrainParams):
     project_name: str = Field("project-name", title="Output directory")
 
     # data params
+    data_config: Optional[str] = Field(None, title="dataset config name")
     data_path: str = Field("data", title="Data path")
     train_split: str = Field("train", title="Train data config")
     valid_split: Optional[str] = Field(None, title="Validation data config")
