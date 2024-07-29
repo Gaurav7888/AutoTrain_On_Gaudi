@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import styles from "./train.module.css";
 import { OptionsSelection } from "../components/custom/OptionsSelection";
+import Sidebar from "../components/custom/Sidebar";
+import TrainingInterface from "../components/custom/TrainingInterface";
 
 export default function Train() {
   const searchParams = useSearchParams();
@@ -28,15 +30,24 @@ export default function Train() {
     console.log("Starting training with:", formData);
   };
 
+  const sidebarProps = {
+    validUsers: ["user1", "user2"],
+    enableLocal: 1,
+    enableNgc: 0,
+    enableNvcf: 0,
+    version: "1.0.0",
+  };
+
   return (
     <>
-      <OptionsSelection
+      {/* <OptionsSelection
         handleStartTraining={handleStartTraining}
         handleInputChange={handleInputChange}
         formData={formData}
         styles={styles}
-      />
-      ;
+      /> */}
+      <Sidebar {...sidebarProps} />
+      <TrainingInterface />
     </>
   );
 }
