@@ -2,6 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import styles from "./page.module.css";
 
 const tasks = [
@@ -12,25 +13,38 @@ const tasks = [
 
 export default function Home() {
   const router = useRouter();
+  const [selectedTask, setSelectedTask] = useState(tasks[0].id);
 
-  const handleCardClick = (taskId) => {
-    router.push(`/train?task=${taskId}`);
+  const handleTaskChange = (e) => {
+    setSelectedTask(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    router.push(`/train?task=${selectedTask}`);
   };
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Select a Task</h1>
-      <div className={styles.cardContainer}>
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            className={styles.card}
-            onClick={() => handleCardClick(task.id)}
+      <h1 className={styles.title}>Select Task</h1>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <label>
+          Task:
+          <select
+            name="task"
+            value={selectedTask}
+            onChange={handleTaskChange}
+            required
           >
-            {task.name}
-          </div>
-        ))}
-      </div>
+            {tasks.map((task) => (
+              <option key={task.id} value={task.id}>
+                {task.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit">Next</button>
+      </form>
     </div>
   );
 }
