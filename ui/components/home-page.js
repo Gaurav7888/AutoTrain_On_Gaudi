@@ -19,35 +19,55 @@ export default function HomePage() {
   ]
 
   const handleSetConfigKey = (key, value) => {
-    console.log(key, value);
-    const newConfig = Object.keys(config).map((k) => {
-      if (k == key) {
-        return { [k]: value }
+    setConfig((prev) => {
+      return {
+        ...prev,
+        [key]: value
       }
-      return { [k]: config[k] }
+    });
+  }
+
+  const sanitizeParams = (params) => {
+    let newParams = {};
+
+    Object.keys(params).forEach((key) => {
+      let val = params[key];
+      let type = val.type;
+      let def = val.default;
+      let defaultVal = typeof def == "boolean" ? def == true ? "true" : "false" : def;
+      let options = type == "dropdown" ? val.options : [];
+      let newOpts = []
+      if (type == "dropdown") {
+        newOpts = options.map((op) => {
+          return op == true ? "true" : op == false ? "false" : op
+        })
+      }
+
+      newParams[key] = {
+        type: type,
+        label: val.label,
+        default: defaultVal,
+        options: newOpts
+      }
     })
-    setConfig(newConfig);
+    return newParams;
   }
 
   const handleTaskChange = (event) => {
     setShowTrainingConfig(true)
-    console.log("config: ", config);
     let val = event.target.value;
     setTask(val);
     let url = SERVER_URL + `/ui/params/` + val + `/basic` 
     axios.get(url).then((resp) => {
-      let _params = resp.data;
+      let _params = sanitizeParams(resp.data);
       setParams(_params);
       Object.keys(_params).forEach((key) => {
-        console.log(key, _params[key].default);
         handleSetConfigKey(key, _params[key].default);
       });
     })
   }
 
-  // useEffect(() => {
-
-  // }, [config])
+  useEffect(() => { }, [config]);
 
   return (
     <>
@@ -94,8 +114,7 @@ export default function HomePage() {
             {Object.keys(params).map((k) => {
               let type = params[k].type;
               let label = params[k].label;
-              let defaultVal = params[k].default;
-              let options = type == "dropdown" ? params[k].options : [];
+              let options = params[k].options;
               return (
                 <Grid
                   item
@@ -110,8 +129,8 @@ export default function HomePage() {
                       select
                       label={`Choose ${label}`}
                       value={config[k]}
-                      // defaultValue={defaultVal}
                       size="small"
+                      name={k}
                       onChange={(e) => {
                         handleSetConfigKey(k, e.target.value);
                       }}
@@ -127,7 +146,7 @@ export default function HomePage() {
                       id="outlined-controlled"
                       label={label}
                       value={config[k]}
-                      // defaultValue={defaultVal}
+                        name={k}
                       onChange={(event) => {
                         handleSetConfigKey(k, event.target.value);
                       }}
