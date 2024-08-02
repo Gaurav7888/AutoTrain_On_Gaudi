@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from autotrain import __version__, logger
 from autotrain.app.api_routes import api_router
@@ -16,6 +17,15 @@ app = FastAPI()
 if "SPACE_ID" in os.environ:
     attach_oauth(app)
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(ui_router, prefix="/ui", include_in_schema=False)
 app.include_router(api_router, prefix="/api")
 static_path = os.path.join(BASE_DIR, "static")
