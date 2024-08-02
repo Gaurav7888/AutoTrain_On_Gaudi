@@ -10,6 +10,7 @@ export default function HomePage() {
   const [config, setConfig] = useState({})
   const [showTrainingConfig, setShowTrainingConfig] = useState(false);
 
+  // TODO: Update to fetch from API
   const tasksOpts = [
     { value: "text-classification", label: "Text Classification" },
     { value: "text-regression", label: "Text Regression" },
