@@ -9,6 +9,7 @@ export default function HomePage() {
   const [params, setParams] = useState({})
   const [config, setConfig] = useState({})
   const [showTrainingConfig, setShowTrainingConfig] = useState(false);
+  const [projectName, setProjectName] = useState("");
 
   // TODO: Update to fetch from API
   const tasksOpts = [
@@ -82,8 +83,8 @@ export default function HomePage() {
     let payload = {
       task: task,
       params: config,
-      project_name: "test", // TODO: update this
-      hardware: "local-ui", // TODO: update this
+      project_name: projectName,
+      hardware: "local-ui", // TODO: update this, if want to support hf spaces infra
       base_model: config.model_name_or_path,
       column_mapping: { text_column: "text", target_column: "target" },
       hub_dataset: config.dataset_name, // TODO: update this
@@ -114,6 +115,15 @@ export default function HomePage() {
       >
         <div>
           <TextField
+            id="outlined-controlled"
+            label="Project Name"
+            value={projectName}
+            onChange={(event) => {
+              setProjectName(event.target.value);
+            }}
+            size="small"
+          />
+          <TextField
             id="outlined-select-currency"
             select
             label="Choose Task"
@@ -133,70 +143,74 @@ export default function HomePage() {
       </Box>
       {showTrainingConfig && (
         <>
-        <Box
-          component="form"
-          sx={{
-            "& .MuiTextField-root": { m: 1, width: "25ch" },
-          }}
-          noValidate
-          autoComplete="off"
-        >
-          <Box>
-            <Typography variant="h5">Training Configuration</Typography>
-          </Box>
-          <Grid container>
-            {Object.keys(params).map((k) => {
-              let type = params[k].type;
-              let label = params[k].label;
-              let options = params[k].options;
-              return (
-                <Grid
-                  item
-                  sx={{
-                    margin: "0.1rem",
-                  }}
-                  key={k}
-                >
-                  {type == "dropdown" ? (
-                    <TextField
-                      id="outlined-select-currency"
-                      select
-                      label={`Choose ${label}`}
-                      value={config[k]}
-                      size="small"
-                      name={k}
-                      onChange={(e) => {
-                        handleSetConfigKey(k, e.target.value);
-                      }}
-                    >
-                      {options.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    <TextField
-                      id="outlined-controlled"
-                      label={label}
-                      value={config[k]}
+          <Box
+            component="form"
+            sx={{
+              "& .MuiTextField-root": { m: 1, width: "25ch" },
+            }}
+            noValidate
+            autoComplete="off"
+          >
+            <Box>
+              <Typography variant="h5">Training Configuration</Typography>
+            </Box>
+            <Grid container>
+              {Object.keys(params).map((k) => {
+                let type = params[k].type;
+                let label = params[k].label;
+                let options = params[k].options;
+                return (
+                  <Grid
+                    item
+                    sx={{
+                      margin: "0.1rem",
+                    }}
+                    key={k}
+                  >
+                    {type == "dropdown" ? (
+                      <TextField
+                        id="outlined-select-currency"
+                        select
+                        label={`Choose ${label}`}
+                        value={config[k]}
+                        size="small"
                         name={k}
-                      onChange={(event) => {
-                        handleSetConfigKey(k, event.target.value);
-                      }}
-                      size="small"
-                    />
-                  )}
-                </Grid>
-              );
-            })}
-          </Grid>
+                        onChange={(e) => {
+                          handleSetConfigKey(k, e.target.value);
+                        }}
+                      >
+                        {options.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    ) : (
+                      <TextField
+                        id="outlined-controlled"
+                        label={label}
+                        value={config[k]}
+                        name={k}
+                        onChange={(event) => {
+                          handleSetConfigKey(k, event.target.value);
+                        }}
+                        size="small"
+                      />
+                    )}
+                  </Grid>
+                );
+              })}
+            </Grid>
           </Box>
           <Box>
-            <Button variant="contained" color="primary" onClick={() => handleStartTraining()} >
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleStartTraining()}
+            >
               Start
-           </Button> 
-        </Box>
+            </Button>
+          </Box>
         </>
       )}
     </>

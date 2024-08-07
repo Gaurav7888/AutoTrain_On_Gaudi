@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 
 from autotrain.commands import launch_command
 from autotrain.trainers.clm.params import LLMTrainingParams
@@ -17,11 +18,11 @@ from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
 
 
+
 ALLOW_REMOTE_CODE = os.environ.get("ALLOW_REMOTE_CODE", "true").lower() == "true"
 
 def run_training(params, task_id, local=False, wait=False):
     params = json.loads(params)
-    project_name = 'test-project'
     if isinstance(params, str):
         params = json.loads(params)
     if task_id == 9:
@@ -51,8 +52,10 @@ def run_training(params, task_id, local=False, wait=False):
     else:
         raise NotImplementedError
 
-    params.save(output_dir=project_name)
-    cmd = launch_command(params=params, project_name=project_name)
+    # output directory for storing checkpoints training config
+    directory = "out/" + params.project_name + "/" + time.strftime("%Y%m%d-%H%M%S")
+    params.save(output_dir=directory)
+    cmd = launch_command(params=params, dir=directory)
     cmd = [str(c) for c in cmd]
     env = os.environ.copy()
     process = subprocess.Popen(cmd, env=env)

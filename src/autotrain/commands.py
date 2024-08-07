@@ -18,7 +18,7 @@ from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
 
 
-def launch_command(params, project_name):
+def launch_command(params, dir):
     """
     Launches training command based on the given parameters.
 
@@ -31,8 +31,7 @@ def launch_command(params, project_name):
         None
     """
 
-    # params.project_name = shlex.split(params.project_name)[0]
-    # project_name = shlex.split(project_name)[0]
+    project_name = dir
     cuda_available = torch.cuda.is_available()
     mps_available = torch.backends.mps.is_available()
     if cuda_available:

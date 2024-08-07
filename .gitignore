@@ -141,3 +141,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# includes output for training models
+out
