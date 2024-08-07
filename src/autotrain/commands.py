@@ -142,46 +142,50 @@ def launch_command(params, project_name):
             os.path.join(project_name, "training_params.json"),
         ]
     elif (
-        isinstance(params, TextClassificationParams)
-        or isinstance(params, TextRegressionParams)
+        isinstance(params, TextRegressionParams)
         or isinstance(params, SentenceTransformersParams)
         or isinstance(params, TextClassificationGaudiParams)
     ):
-        if num_gpus == 0:
-            cmd = [
-                "accelerate",
-                "launch",
-                "--cpu",
-            ]
-        elif num_gpus == 1:
-            cmd = [
-                "accelerate",
-                "launch",
-                "--num_machines",
-                "1",
-                "--num_processes",
-                "1",
-            ]
-        else:
-            cmd = [
-                "accelerate",
-                "launch",
-                "--multi_gpu",
-                "--num_machines",
-                "1",
-                "--num_processes",
-                str(num_gpus),
-            ]
+        # TODO: Add support to make this configurable
+        #
+        # if num_gpus == 0:
+        #     cmd = [
+        #         "accelerate",
+        #         "launch",
+        #         "--cpu",
+        #     ]
+        # elif num_gpus == 1:
+        #     cmd = [
+        #         "accelerate",
+        #         "launch",
+        #         "--num_machines",
+        #         "1",
+        #         "--num_processes",
+        #         "1",
+        #     ]
+        # else:
+        #     cmd = [
+        #         "accelerate",
+        #         "launch",
+        #         "--multi_gpu",
+        #         "--num_machines",
+        #         "1",
+        #         "--num_processes",
+        #         str(num_gpus),
+        #     ]
 
-        if num_gpus > 0:
-            cmd.append("--mixed_precision")
-            if params.mixed_precision == "fp16":
-                cmd.append("fp16")
-            elif params.mixed_precision == "bf16":
-                cmd.append("bf16")
-            else:
-                cmd.append("no")
+        # if num_gpus > 0:
+        #     cmd.append("--mixed_precision")
+        #     if params.mixed_precision == "fp16":
+        #         cmd.append("fp16")
+        #     elif params.mixed_precision == "bf16":
+        #         cmd.append("bf16")
+        #     else:
+        #         cmd.append("no")
 
+
+        cmd = ["python3"]
+        
         if isinstance(params, TextRegressionParams):
             cmd.extend(
                 [
@@ -203,7 +207,7 @@ def launch_command(params, project_name):
         else:
             cmd.extend(
                 [
-                    "-m",
+                    "-m"
                     "autotrain.trainers.text_classification",
                     "--training_config",
                     os.path.join(project_name, "training_params.json"),

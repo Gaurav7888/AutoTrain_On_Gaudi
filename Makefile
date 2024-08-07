@@ -1,7 +1,18 @@
-.PHONY: quality style test
+
+include install/Makefile.core.mk
+
+.PHONY: quality style test autotrain
+
+# Install deps
+install:
+	pip install -e .
+
+# Run AutoTrain
+autotrain:
+	export HF_TOKEN=${HF_TOKEN};
+	autotrain app --port ${PORT} --host ${HOST}
 
 # Check that source code meets quality standards
-
 quality:
 	black --check --line-length 119 --target-version py38 .
 	isort --check-only .
