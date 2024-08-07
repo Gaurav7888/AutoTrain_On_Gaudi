@@ -179,7 +179,7 @@ class AppParams:
             raise ValueError(f"Unknown task: {self.task}")
 
     def _munge_common_params(self):
-        _params = json.loads(self.job_params_json)
+        _params = self.job_params_json
         _params["token"] = self.token
         _params["project_name"] = f"{self.project_name}"
         if "push_to_hub" not in _params:

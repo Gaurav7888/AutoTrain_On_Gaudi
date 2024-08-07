@@ -7,6 +7,7 @@ from typing import List
 
 import torch
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from pydantic import BaseModel
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
@@ -25,6 +26,7 @@ from autotrain.dataset import (
     AutoTrainObjectDetectionDataset,
 )
 from autotrain.help import get_app_help
+from autotrain.app.api_routes import APICreateProjectModel
 from autotrain.project import AutoTrainProject
 
 
@@ -368,7 +370,6 @@ UI_PARAMS = {
         "type": "string",
         "label": "Evalutaion strategy",
     },
-
 }
 
 
@@ -540,44 +541,25 @@ async def fetch_model_choices(
 
 @ui_router.post("/create_project", response_class=JSONResponse)
 async def handle_form(
-    project_name: str = Form(...),
-    task: str = Form(...),
-    base_model: str = Form(...),
-    hardware: str = Form(...),
-    params: str = Form(...),
-    autotrain_user: str = Form(...),
-    column_mapping: str = Form('{"default": "value"}'),
-    data_files_training: List[UploadFile] = File(None),
-    data_files_valid: List[UploadFile] = File(None),
-    hub_dataset: str = Form(""),
-    train_split: str = Form(""),
-    valid_split: str = Form(""),
+    payload: APICreateProjectModel,
     token: str = Depends(user_authentication),
 ):
     """
     This function is used to create a new project
-    :param project_name: str
-    :param task: str
-    :param base_model: str
-    :param hardware: str
-    :param params: str
-    :param autotrain_user: str
-    :param column_mapping: str
-    :param data_files_training: List[UploadFile]
-    :param data_files_valid: List[UploadFile]
-    :param hub_dataset: str
-    :param train_split: str
-    :param valid_split: str
+    :body: APICreateProjectModel
     :return: JSONResponse
     """
+    train_split = payload.train_split
     train_split = train_split.strip()
     if len(train_split) == 0:
         train_split = None
 
+    valid_split = payload.valid_split
     valid_split = valid_split.strip()
     if len(valid_split) == 0:
         valid_split = None
 
+    hardware = payload.hardware
     logger.info(f"hardware: {hardware}")
     if hardware == "local-ui":
         running_jobs = get_running_jobs(DB)
@@ -586,22 +568,30 @@ async def handle_form(
                 status_code=409, detail="Another job is already running. Please wait for it to finish."
             )
 
+    project_name = payload.project_name
+    autotrain_user = payload.username
     if repo_exists(f"{autotrain_user}/{project_name}", token=token):
         raise HTTPException(
             status_code=409,
             detail=f"Project {project_name} already exists. Please choose a different name.",
         )
 
-    params = json.loads(params)
+    params = payload.params
+    # params = json.loads(params)
     # convert "null" to None
-    for key in params:
-        if params[key] == "null":
-            params[key] = None
-    column_mapping = json.loads(column_mapping)
+    # for key in params:
+    #     if params[key] == "null":
+    #         params[key] = None
+    
+    column_mapping = payload.column_mapping
+    column_mapping = column_mapping.model_dump()
 
+    data_files_training = payload.data_files_training
+    data_files_valid = payload.data_files_valid
     training_files = [f.file for f in data_files_training if f.filename != ""] if data_files_training else []
     validation_files = [f.file for f in data_files_valid if f.filename != ""] if data_files_valid else []
 
+    hub_dataset = payload.hub_dataset
     if len(training_files) > 0 and len(hub_dataset) > 0:
         raise HTTPException(
             status_code=400, detail="Please either upload a dataset or choose a dataset from the Hugging Face Hub."
@@ -612,6 +602,8 @@ async def handle_form(
             status_code=400, detail="Please upload a dataset or choose a dataset from the Hugging Face Hub."
         )
 
+    base_model = payload.base_model
+    task = payload.task
     if len(hub_dataset) > 0 and task == "dreambooth":
         raise HTTPException(status_code=400, detail="Dreambooth does not support Hugging Face Hub datasets.")
 
@@ -715,7 +707,7 @@ async def handle_form(
     else:
         data_path = hub_dataset
     app_params = AppParams(
-        job_params_json=json.dumps(params),
+        job_params_json=params.model_dump(),
         token=token,
         project_name=project_name,
         username=autotrain_user,
