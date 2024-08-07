@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react'
-import { Box, TextField, MenuItem, Typography, Grid } from '@mui/material';
+import { Box, TextField, MenuItem, Typography, Grid, Button } from '@mui/material';
 import axios from 'axios';
 import { SERVER_URL } from '@/lib/constants';
 
@@ -67,6 +67,29 @@ export default function HomePage() {
     })
   }
 
+  const handleStartTraining = () => { 
+    let url = SERVER_URL + `/ui/create_project`
+    let payload = {
+      task: task,
+      params: config,
+      project_name: "test", // TODO: update this
+      hardware: "local-ui", // TODO: update this
+      base_model: config.model_name_or_path,
+      column_mapping: { text_column: "text", target_column: "target" },
+      hub_dataset: config.dataset_name, // TODO: update this
+      train_split: "train", // TODO: update this
+      valid_split: "test", // TODO: update this
+      username: "thebeginner86"
+    };
+    axios.post(url, JSON.stringify(payload), {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then((resp) => { 
+      console.log(resp.data);
+    }).catch((err) => { console.error(err) });
+  }
+
   useEffect(() => { }, [config]);
 
   return (
@@ -99,6 +122,7 @@ export default function HomePage() {
         </div>
       </Box>
       {showTrainingConfig && (
+        <>
         <Box
           component="form"
           sx={{
@@ -157,7 +181,13 @@ export default function HomePage() {
               );
             })}
           </Grid>
+          </Box>
+          <Box>
+            <Button variant="contained" color="primary" onClick={() => handleStartTraining()} >
+              Start
+           </Button> 
         </Box>
+        </>
       )}
     </>
   );
