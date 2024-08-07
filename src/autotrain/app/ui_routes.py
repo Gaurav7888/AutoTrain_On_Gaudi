@@ -282,8 +282,9 @@ UI_PARAMS = {
         "options": [True, False],
     },
     "model_name_or_path": {
-        "type": "string",
+        "type": "dropdown",
         "label": "Model name or path",
+        "options": [],
     },
     "backend": {
         "type": "string",
@@ -475,6 +476,9 @@ async def fetch_params(task: str, param_type: str, authenticated: bool = Depends
             ui_params[param]["default"] = task_params[param]
         else:
             logger.info(f"Param {param} not found in UI_PARAMS")
+    # update options for mode_name_or_path
+    if "model_name_or_path" in ui_params:
+        ui_params["model_name_or_path"]["options"] = MODEL_CHOICE[task]
 
     ui_params = dict(sorted(ui_params.items(), key=lambda x: (x[1]["type"], x[1]["label"])))
     return ui_params
