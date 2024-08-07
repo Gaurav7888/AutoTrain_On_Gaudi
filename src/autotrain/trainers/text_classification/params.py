@@ -36,6 +36,8 @@ class TextClassificationGaudiParams(AutoTrainParams):
     logging_steps: int = Field(-1, title="Logging steps")
     auto_find_batch_size: bool = Field(False, title="Auto find batch size")
     save_total_limit: int = Field(1, title="Save total limit")
+    project_name: str = Field("project-name", title="Output directory")
+    username: Optional[str] = Field(None, title="Hugging Face Username")
 
 
 class TextClassificationParams(TextClassificationGaudiParams):

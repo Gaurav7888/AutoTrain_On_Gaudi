@@ -19,7 +19,7 @@ from autotrain.trainers.object_detection.params import ObjectDetectionParams
 from autotrain.trainers.sent_transformers.params import SentenceTransformersParams
 from autotrain.trainers.seq2seq.params import Seq2SeqParams
 from autotrain.trainers.tabular.params import TabularParams
-from autotrain.trainers.text_classification.params import TextClassificationParams
+from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
 
@@ -30,7 +30,7 @@ class AutoTrainProject:
         List[
             Union[
                 LLMTrainingParams,
-                TextClassificationParams,
+                TextClassificationGaudiParams,
                 TabularParams,
                 DreamBoothTrainingParams,
                 Seq2SeqParams,
@@ -43,7 +43,7 @@ class AutoTrainProject:
             ]
         ],
         LLMTrainingParams,
-        TextClassificationParams,
+        TextClassificationGaudiParams,
         TabularParams,
         DreamBoothTrainingParams,
         Seq2SeqParams,
