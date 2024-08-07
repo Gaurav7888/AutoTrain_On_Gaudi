@@ -18,7 +18,17 @@ export default function HomePage() {
     { value: "causual-language-modeling", label: "Causal Language Modeling" },
   ]
 
-  const handleSetConfigKey = (key, value) => {
+  const handleSetConfigKey = (key, value, params) => {
+    if (params[key].type == "boolean") { 
+      value = value == "true" ? true : false;
+    }
+    if (params[key].type == "number") {
+      value = parseInt(value);
+    }
+    if (params[key].type == "float") { 
+      value = parseFloat(value);
+    }
+    
     setConfig((prev) => {
       return {
         ...prev,
@@ -62,7 +72,7 @@ export default function HomePage() {
       let _params = sanitizeParams(resp.data);
       setParams(_params);
       Object.keys(_params).forEach((key) => {
-        handleSetConfigKey(key, _params[key].default);
+        handleSetConfigKey(key, _params[key].default, _params);
       });
     })
   }

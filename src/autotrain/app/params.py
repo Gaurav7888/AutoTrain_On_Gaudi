@@ -10,7 +10,7 @@ from autotrain.trainers.object_detection.params import ObjectDetectionParams
 from autotrain.trainers.sent_transformers.params import SentenceTransformersParams
 from autotrain.trainers.seq2seq.params import Seq2SeqParams
 from autotrain.trainers.tabular.params import TabularParams
-from autotrain.trainers.text_classification.params import TextClassificationParams
+from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
 
@@ -79,7 +79,7 @@ PARAMS["llm"] = LLMTrainingParams(
     max_completion_length=128,
 ).model_dump()
 
-PARAMS["text-classification"] = TextClassificationParams(
+PARAMS["text-classification"] = TextClassificationGaudiParams(
     mixed_precision="fp16",
     log="tensorboard",
 ).model_dump()
@@ -257,7 +257,7 @@ class AppParams:
             _params["target_column"] = self.column_mapping.get("label" if not self.api else "target_column", "label")
             _params["train_split"] = self.train_split
             _params["valid_split"] = self.valid_split
-        return TextClassificationParams(**_params)
+        return TextClassificationGaudiParams(**_params)
 
     def _munge_params_text_reg(self):
         _params = self._munge_common_params()

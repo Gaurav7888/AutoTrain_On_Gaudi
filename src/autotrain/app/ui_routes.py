@@ -79,15 +79,15 @@ UI_PARAMS = {
         "options": [True, False],
     },
     "warmup_ratio": {
-        "type": "number",
+        "type": "float",
         "label": "Warmup proportion",
     },
     "max_grad_norm": {
-        "type": "number",
+        "type": "float",
         "label": "Max grad norm",
     },
     "weight_decay": {
-        "type": "number",
+        "type": "float",
         "label": "Weight decay",
     },
     "epochs": {
@@ -323,7 +323,7 @@ UI_PARAMS = {
         "label": "Per device training batch size",
     },
     "learning_rate": {
-        "type": "number",
+        "type": "float",
         "label": "Learning rate",
     },
     "optim": {
