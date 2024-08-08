@@ -597,10 +597,7 @@ def train(config):
     # trainer.remove_callback(PrinterCallback)
     trainer.train()
     # utils.post_training_steps(config, trainer)
-<<<<<<< .merge_file_T9zmwu
     
 args = parse_args()
 training_config = json.load(open(args.training_config))
 train(training_config)
-=======
->>>>>>> .merge_file_9ckaLD
