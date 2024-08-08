@@ -13,6 +13,7 @@ from autotrain.trainers.tabular.params import TabularParams
 from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
+from autotrain.trainers.audio_classification.params import AudioClassificationGaudiParams
 
 
 HIDDEN_PARAMS = [
@@ -78,7 +79,6 @@ PARAMS["llm"] = LLMTrainingParams(
     chat_template="none",
     max_completion_length=128,
 ).model_dump()
-
 PARAMS["text-classification"] = TextClassificationGaudiParams(
     mixed_precision="fp16",
     log="tensorboard",
@@ -128,6 +128,10 @@ PARAMS["text-regression"] = TextRegressionParams(
     log="tensorboard",
 ).model_dump()
 PARAMS["image-regression"] = ImageRegressionParams(
+    mixed_precision="fp16",
+    log="tensorboard",
+).model_dump()
+PARAMS["audio-classification"] = AudioClassificationGaudiParams(
     mixed_precision="fp16",
     log="tensorboard",
 ).model_dump()

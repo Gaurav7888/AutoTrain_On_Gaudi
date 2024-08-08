@@ -53,7 +53,7 @@ UI_PARAMS = {
     "optimizer": {
         "type": "dropdown",
         "label": "Optimizer",
-        "options": ["adamw_torch", "adamw", "adam", "sgd"],
+        "options": ["adamw_torch", "adamw", "adam", "sgd", "adamw_torch_fused"],
     },
     "scheduler": {
         "type": "dropdown",
@@ -370,6 +370,84 @@ UI_PARAMS = {
     "evaluation_strategy": {
         "type": "string",
         "label": "Evalutaion strategy",
+    },
+    "feature_extractor_name": {
+        "type": "string",
+        "label": "Feature extractor name",
+    },
+    "freeze_feature_encoder": {
+        "type": "dropdown",
+        "label": "Freeze feature encoder",
+        "options": [True, False],
+    },
+    "dataset_config_name": {
+        "type": "string",
+        "label": "Dataset config name",
+    },
+    "do_train": {
+        "type": "dropdown",
+        "label": "Do train",
+        "options": [True, False],
+    },
+    "eval_split_name": {
+        "type": "string",
+        "label": "Eval split name",
+    },
+    "gaudi_config_name": {
+        "type": "string",
+        "label": "Gaudi config name",
+    },
+    "audio_column_name": {
+        "type": "string",
+        "label": "Audio column name",
+    },
+    "label_column_name": {
+        "type": "string",
+        "label": "Label column name",
+    },
+    "max_length_seconds": {
+        "type": "number",
+        "label": "Max length seconds",
+    },
+    "num_train_epochs": {
+        "type": "number",
+        "label": "Number of training epochs",
+    },
+    "seed": {
+        "type": "number",
+        "label": "Seed",
+    },
+    "attention_mask": {
+        "type": "dropdown",
+        "label": "Attention mask",
+        "options": [True, False],
+    },
+    "per_device_train_batch_size": {
+        "type": "number",
+        "label": "Per device training batch size",
+    },
+    "throughput_warmup_steps": {
+        "type": "number",
+        "label": "Throughput warmup steps",
+    },
+    "dataloader_num_workers": {
+        "type": "number",
+        "label": "Dataloader num workers",
+    },
+    "use_lazy_mode": {
+        "type": "dropdown",
+        "label": "Use lazy mode",
+        "options": [True, False],
+    },
+    "overwrite_output_dir": {
+        "type": "dropdown",
+        "label": "Overwrite output directory",
+        "options": [True, False],
+    },
+    "remove_unused_columns": {
+        "type": "dropdown",
+        "label": "Remove unused columns",
+        "options": [True, False],
     },
 }
 
