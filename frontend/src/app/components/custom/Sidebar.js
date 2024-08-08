@@ -128,13 +128,63 @@ export default function Sidebar({
                 },
               }}
             >
-              <optgroup label="LLM Finetuning">
+              <Box
+                sx={{
+                  maxHeight: "10rem",
+                  overflow: "auto",
+                }}
+              >
+                <optgroup label="LLM Finetuning"></optgroup>
                 <MenuItem value="llm:sft">LLM SFT</MenuItem>
                 <MenuItem value="llm:orpo">LLM ORPO</MenuItem>
                 <MenuItem value="llm:generic">LLM Generic</MenuItem>
                 <MenuItem value="llm:dpo">LLM DPO</MenuItem>
                 <MenuItem value="llm:reward">LLM Reward</MenuItem>
-              </optgroup>
+                <optgroup label="VLM Finetuning"></optgroup>
+                <MenuItem value="vlm:captioning">VLM Captioning</MenuItem>
+                <MenuItem value="vlm:vqa">VLM VQA</MenuItem>
+                <optgroup label="Sentence Transformers"></optgroup>
+                <MenuItem value="st:pair">ST Pair</MenuItem>
+                <MenuItem value="st:pair_class">
+                  ST Pair Classification
+                </MenuItem>
+                <MenuItem value="st:pair_score">ST Pair Scoring</MenuItem>
+                <MenuItem value="st:triplet">ST Triplet</MenuItem>
+                <MenuItem value="st:qa">ST Question Answering</MenuItem>
+                <optgroup label="Other Text Tasks"></optgroup>
+                <MenuItem value="text-classification">
+                  Text Classification
+                </MenuItem>
+                <MenuItem value="text-regression">Text Regression</MenuItem>
+                <MenuItem value="seq2seq">Sequence To Sequence</MenuItem>
+                <MenuItem value="token-classification">
+                  Token Classification
+                </MenuItem>
+                <optgroup label="Image Tasks"></optgroup>
+                <MenuItem value="dreambooth">DreamBooth LoRA</MenuItem>
+                <MenuItem value="image-classification">
+                  Image Classification
+                </MenuItem>
+                <MenuItem value="image-regression">
+                  Image Scoring/Regression
+                </MenuItem>
+                <MenuItem value="image-object-detection">
+                  Object Detection
+                </MenuItem>
+                <optgroup label="Tabular Tasks"></optgroup>
+                <MenuItem value="tabular:classification">
+                  Tabular Classification
+                </MenuItem>
+                <MenuItem value="tabular:regression">
+                  Tabular Regression
+                </MenuItem>
+              </Box>
+              {/* <optgroup label="LLM Finetuning"></optgroup>
+              <MenuItem value="llm:sft">LLM SFT</MenuItem>
+              <MenuItem value="llm:orpo">LLM ORPO</MenuItem>
+              <MenuItem value="llm:generic">LLM Generic</MenuItem>
+              <MenuItem value="llm:dpo">LLM DPO</MenuItem>
+              <MenuItem value="llm:reward">LLM Reward</MenuItem> */}
               {/* Add other optgroups and options here */}
             </Select>
           </ListItem>
