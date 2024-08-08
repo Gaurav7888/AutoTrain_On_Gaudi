@@ -1,6 +1,6 @@
 // app/train/page.js
 "use client";
-
+import { Box } from "@mui/material";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import styles from "./train.module.css";
@@ -46,8 +46,10 @@ export default function Train() {
         formData={formData}
         styles={styles}
       /> */}
-      <Sidebar {...sidebarProps} />
-      <TrainingInterface />
+      <Box display="flex">
+        <Sidebar {...sidebarProps} />
+        <TrainingInterface />
+      </Box>
     </>
   );
 }
