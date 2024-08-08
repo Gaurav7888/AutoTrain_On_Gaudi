@@ -49,7 +49,7 @@ export const OptionsSelection = ({
             required
           />
         </label>
-        {/* Add more fields as needed */}
+        {/* Add Upload field */}
         <button type="button" onClick={handleStartTraining}>
           Start Training
         </button>
