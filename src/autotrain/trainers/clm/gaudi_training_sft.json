@@ -1,0 +1,28 @@
+{
+    "model_name_or_path": "Qwen/Qwen2-7B",
+    "dataset_name": "philschmid/dolly-15k-oai-style",
+    "max_seq_length": 512,
+    "num_train_epochs": 4,
+    "per_device_train_batch_size": 1,
+    "learning_rate": 2e-5,
+    "optim": "adamw_torch_fused",
+    "lr_scheduler_type": "reduce_lr_on_plateau",
+    "gradient_accumulation_steps": 1,
+    "non_blocking_data_copy": false,
+    "evaluation_strategy": "epoch",
+    "do_train": true,
+    "lora_dropout": 0,
+    "token": "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",
+    "push_to_hub": false,
+    "use_habana": true,
+    "output_dir": "./",
+    "use_hpu_graphs": true,
+    "use_hpu_graphs_for_training": true,
+    "use_hpu_graphs_for_inference": true,
+    "use_peft":true,
+    "dataset_config":"default",
+    "streaming":false,
+    "lora_target_modules":["q_proj","v_proj","k_proj","o_proj"],
+    "subset":null
+  }
+  

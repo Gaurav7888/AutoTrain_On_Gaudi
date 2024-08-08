@@ -6,16 +6,17 @@ class TextRegressionDataset:
         self.data = data
         self.tokenizer = tokenizer
         self.config = config
-        self.text_column = self.config.text_column
-        self.target_column = self.config.target_column
+        self.column_mapping_text_column = self.config.column_mapping_text_column
+        self.column_mapping_target_column = self.config.column_mapping_target_column
         self.max_len = self.config.max_seq_length
+        self.device = torch.device("hpu")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item):
-        text = str(self.data[item][self.text_column])
-        target = float(self.data[item][self.target_column])
+        text = str(self.data[item][self.column_mapping_text_column])
+        target = float(self.data[item][self.column_mapping_target_column])
         inputs = self.tokenizer(
             text,
             max_length=self.max_len,
@@ -33,13 +34,13 @@ class TextRegressionDataset:
 
         if token_type_ids is not None:
             return {
-                "input_ids": torch.tensor(ids, dtype=torch.long),
-                "attention_mask": torch.tensor(mask, dtype=torch.long),
-                "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
-                "labels": torch.tensor(target, dtype=torch.float),
+                "input_ids": torch.tensor(ids, dtype=torch.long, device=self.device),
+                "attention_mask": torch.tensor(mask, dtype=torch.long, device=self.device),
+                "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long, device=self.device),
+                "labels": torch.tensor(target, dtype=torch.float, device=self.device),
             }
         return {
-            "input_ids": torch.tensor(ids, dtype=torch.long),
-            "attention_mask": torch.tensor(mask, dtype=torch.long),
-            "labels": torch.tensor(target, dtype=torch.float),
+            "input_ids": torch.tensor(ids, dtype=torch.long, device=self.device),
+            "attention_mask": torch.tensor(mask, dtype=torch.long, device=self.device),
+            "labels": torch.tensor(target, dtype=torch.float, device=self.device),
         }

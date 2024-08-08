@@ -12,11 +12,10 @@ def parse_args():
     return parser.parse_args()
 
 
-@monitor
+#@monitor
 def train(config):
-    if isinstance(config, dict):
-        config = LLMTrainingParams(**config)
-
+    # if isinstance(config, dict):
+    #     config = LLMTrainingParams(**config)
     if config.trainer == "default":
         from autotrain.trainers.clm.train_clm_default import train as train_default
 
