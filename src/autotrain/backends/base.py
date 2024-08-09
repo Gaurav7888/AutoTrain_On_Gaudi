@@ -14,6 +14,7 @@ from autotrain.trainers.tabular.params import TabularParams
 from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
+from autotrain.trainers.audio_classification.params import AudioClassificationGaudiParams
 
 
 AVAILABLE_HARDWARE = {
@@ -70,6 +71,7 @@ class BaseBackend:
         ObjectDetectionParams,
         SentenceTransformersParams,
         ImageRegressionParams,
+        AudioClassificationGaudiParams
     ]
     backend: str
 
@@ -114,6 +116,8 @@ class BaseBackend:
             self.task_id = 30
         elif isinstance(self.params, ImageRegressionParams):
             self.task_id = 24
+        elif isinstance(self.params, AudioClassificationGaudiParams):
+            self.task_id = 31
         else:
             raise NotImplementedError
 

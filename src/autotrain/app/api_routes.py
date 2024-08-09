@@ -209,6 +209,7 @@ class APICreateProjectModel(BaseModel):
         "tabular-classification",
         "tabular-regression",
         "image-regression",
+        "audio-classification"
     ]
     base_model: str
     hardware: Literal[

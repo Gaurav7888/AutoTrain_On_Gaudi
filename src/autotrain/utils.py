@@ -16,6 +16,7 @@ from autotrain.trainers.tabular.params import TabularParams
 from autotrain.trainers.text_classification.params import TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
+from autotrain.trainers.audio_classification.params import AudioClassificationGaudiParams
 
 
 
@@ -49,6 +50,8 @@ def run_training(params, task_id, local=False, wait=False):
         params = SentenceTransformersParams(**params)
     elif task_id == 24:
         params = ImageRegressionParams(**params)
+    elif task_id == 31:
+        params = AudioClassificationGaudiParams(**params)
     else:
         raise NotImplementedError
 

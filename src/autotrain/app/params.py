@@ -179,6 +179,8 @@ class AppParams:
             return self._munge_params_sent_transformers()
         elif self.task == "image-regression":
             return self._munge_params_img_reg()
+        elif self.task == "audio-classification":
+            return self._munge_params_audio_clf()
         else:
             raise ValueError(f"Unknown task: {self.task}")
 
@@ -262,6 +264,12 @@ class AppParams:
             _params["train_split"] = self.train_split
             _params["valid_split"] = self.valid_split
         return TextClassificationGaudiParams(**_params)
+
+    def _munge_params_audio_clf(self):
+        _params = self._munge_common_params()
+        _params["model"] = self.base_model
+        _params["log"] = "tensorboard"
+        return AudioClassificationGaudiParams(**_params)
 
     def _munge_params_text_reg(self):
         _params = self._munge_common_params()

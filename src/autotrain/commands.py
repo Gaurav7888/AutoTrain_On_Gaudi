@@ -16,7 +16,7 @@ from autotrain.trainers.tabular.params import TabularParams
 from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
-
+from autotrain.trainers.audio_classification.params import AudioClassificationGaudiParams
 
 def launch_command(params, dir):
     """
@@ -398,7 +398,14 @@ def launch_command(params, dir):
                 os.path.join(project_name, "training_params.json"),
             ]
         )
-
+    elif isinstance(params, AudioClassificationGaudiParams):
+        cmd = [
+            "python",
+            "-m",
+            "autotrain.trainers.audio_classification",
+            "--training_config",
+            os.path.join(project_name, "training_params.json"),
+        ]
     else:
         raise ValueError("Unsupported params type")
 
