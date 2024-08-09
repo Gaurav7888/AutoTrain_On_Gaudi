@@ -103,7 +103,7 @@ class RunAutoTrainAppCommand(BaseAutoTrainCommand):
             logger.info("Please wait for the app to load...")
 
         command = f"uvicorn autotrain.app.app:app --host {self.host} --port {self.port}"
-        command += f" --workers {self.workers}"
+        command += f" --workers {self.workers} --reload"
 
         with open("autotrain.log", "w", encoding="utf-8") as log_file:
             if sys.platform == "win32":
