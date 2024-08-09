@@ -9,11 +9,22 @@ from autotrain import __version__, logger
 from autotrain.app.api_routes import api_router
 from autotrain.app.oauth import attach_oauth
 from autotrain.app.ui_routes import ui_router
-
+from fastapi.middleware.cors import CORSMiddleware
 
 logger.info("Starting AutoTrain...")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 if "SPACE_ID" in os.environ:
     attach_oauth(app)
 
