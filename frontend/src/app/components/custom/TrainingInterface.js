@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { fetchParams } from "../api/fetch-params/route";
 
-const TrainingInterface = ({ task, setTask }) => {
+const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
   const [isModelTraining, setIsModelTraining] = useState(false);
   const [showJsonParameters, setShowJsonParameters] = useState(false);
   const [baseModelCustom, setBaseModelCustom] = useState(false);
@@ -27,7 +27,7 @@ const TrainingInterface = ({ task, setTask }) => {
     // Fetch initial data
     const fetchData = async () => {
       try {
-        const res = await fetchParams(task, "basic");
+        const res = await fetchParams(task, paramType);
         setParams(res);
         console.log(`params for ${task}: ${res}`);
       } catch (error) {
@@ -39,7 +39,7 @@ const TrainingInterface = ({ task, setTask }) => {
     fetchAccelerators();
     fetchTrainingStatus();
     fetchBaseModels();
-  }, [task]);
+  }, [task, paramType]);
 
   const fetchAccelerators = () => {
     // Implement fetching accelerators

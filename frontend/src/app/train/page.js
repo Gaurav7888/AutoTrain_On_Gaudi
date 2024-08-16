@@ -10,6 +10,7 @@ import TrainingInterface from "../components/custom/TrainingInterface";
 
 export default function Train() {
   const [task, setTask] = useState("llm%3Asft");
+  const [paramType, setParamType] = useState("basic");
   const searchParams = useSearchParams();
   // const task = searchParams.get("task") || "";
 
@@ -53,8 +54,15 @@ export default function Train() {
           task={task}
           setTask={setTask}
           handleInputChange={handleInputChange}
+          paramType={paramType}
+          setParamType={setParamType}
         />
-        <TrainingInterface task={task} setTask={setTask} />
+        <TrainingInterface
+          paramType={paramType}
+          setParamType={setParamType}
+          task={task}
+          setTask={setTask}
+        />
       </Box>
     </>
   );
