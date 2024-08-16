@@ -14,19 +14,32 @@ import {
   Switch,
   TextareaAutosize,
 } from "@mui/material";
+import { fetchParams } from "../api/fetch-params/route";
 
-const TrainingInterface = () => {
+const TrainingInterface = ({ task, setTask }) => {
   const [isModelTraining, setIsModelTraining] = useState(false);
   const [showJsonParameters, setShowJsonParameters] = useState(false);
   const [baseModelCustom, setBaseModelCustom] = useState(false);
   const [datasetSource, setDatasetSource] = useState("local");
+  const [params, setParams] = useState({});
 
   useEffect(() => {
     // Fetch initial data
+    const fetchData = async () => {
+      try {
+        const res = await fetchParams(task, "basic");
+        setParams(res);
+        console.log(`params for ${task}: ${res}`);
+      } catch (error) {
+        console.error("Error fetching and setting params:", error);
+      }
+    };
+
+    fetchData();
     fetchAccelerators();
     fetchTrainingStatus();
     fetchBaseModels();
-  }, []);
+  }, [task]);
 
   const fetchAccelerators = () => {
     // Implement fetching accelerators
@@ -175,31 +188,87 @@ const TrainingInterface = () => {
               <Typography variant="h6" color="textPrimary" mb={2}>
                 Parameters
               </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showJsonParameters}
-                    onChange={() => setShowJsonParameters(!showJsonParameters)}
-                    color="primary"
-                  />
-                }
-                label="JSON"
-              />
-              {showJsonParameters ? (
-                <Box mt={2}>
-                  <TextareaAutosize
-                    minRows={10}
-                    placeholder="Loading..."
-                    style={{ width: "100%" }}
-                    id="params_json"
-                    name="params_json"
-                  />
-                </Box>
-              ) : (
-                <Box mt={2} id="dynamic-ui">
-                  {/* Add dynamic UI elements here */}
-                </Box>
-              )}
+              <Box
+                mt={2}
+                id="dynamic-ui"
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  width: "100%",
+                  marginTop: "-1rem",
+                }}
+              >
+                {Object.entries(params).map(([key, config]) => {
+                  switch (config.type) {
+                    case "dropdown":
+                      return (
+                        <FormControl
+                          fullWidth
+                          key={key}
+                          margin="normal"
+                          sx={{
+                            maxWidth: "10rem",
+                            display: "flex",
+                            flexDirection: "column",
+                            flexGrow: 1,
+                          }}
+                        >
+                          <InputLabel>{config.label}</InputLabel>
+                          <Select
+                            defaultValue={config.default}
+                            id={key}
+                            name={key}
+                            label={config.label}
+                          >
+                            {config.options.map((option) => (
+                              <MenuItem key={option} value={option}>
+                                {option.toString()}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      );
+                    case "number":
+                      return (
+                        <TextField
+                          key={key}
+                          fullWidth
+                          label={config.label}
+                          type="number"
+                          defaultValue={config.default}
+                          margin="normal"
+                          id={key}
+                          name={key}
+                          sx={{
+                            maxWidth: "10rem",
+                            flexGrow: 1,
+                          }}
+                        />
+                      );
+                    case "string":
+                      return (
+                        <TextField
+                          key={key}
+                          fullWidth
+                          label={config.label}
+                          type="text"
+                          defaultValue={config.default}
+                          margin="normal"
+                          id={key}
+                          name={key}
+                          sx={{
+                            maxWidth: "10rem",
+                            flexGrow: 1,
+                          }}
+                        />
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+              </Box>
             </Box>
           </Grid>
         </Grid>

@@ -48,3 +48,9 @@ pip:
 	make style && make quality
 	python setup.py sdist bdist_wheel
 	twine upload dist/* --verbose --repository autotrain-advanced
+
+server:
+	uvicorn src.autotrain.app.app:app --port 8080 --reload --workers 4
+
+ui:
+	cd frontend && npm run dev
