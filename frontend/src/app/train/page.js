@@ -9,8 +9,9 @@ import Sidebar from "../components/custom/Sidebar";
 import TrainingInterface from "../components/custom/TrainingInterface";
 
 export default function Train() {
+  const [task, setTask] = useState("llm%3Asft");
   const searchParams = useSearchParams();
-  const task = searchParams.get("task") || "";
+  // const task = searchParams.get("task") || "";
 
   const [formData, setFormData] = useState({
     projectName: "",
@@ -47,8 +48,13 @@ export default function Train() {
         styles={styles}
       /> */}
       <Box display="flex">
-        <Sidebar {...sidebarProps} />
-        <TrainingInterface />
+        <Sidebar
+          {...sidebarProps}
+          task={task}
+          setTask={setTask}
+          handleInputChange={handleInputChange}
+        />
+        <TrainingInterface task={task} setTask={setTask} />
       </Box>
     </>
   );

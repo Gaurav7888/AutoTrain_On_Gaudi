@@ -1,5 +1,6 @@
 export const fetchParams = async (task, param_type) => {
-  const serverUrl = process.env.SERVER_URL;
+  const serverUrl = process.env.NEXT_PUBLIC_SERVER_UI_URL;
+  // const serverUrl = "http://127.0.0.1:8080/ui";
 
   if (!serverUrl) {
     throw new Error("Server URL not defined");
@@ -11,7 +12,8 @@ export const fetchParams = async (task, param_type) => {
 
   try {
     const response = await fetch(
-      `${serverUrl}/params?task=${task}&param_type=${param_type}`
+      `${serverUrl}/params/${task}/${param_type}`
+      // `${serverUrl}/version`
     );
     if (!response.ok) {
       throw new Error(
@@ -21,7 +23,11 @@ export const fetchParams = async (task, param_type) => {
     console.info(
       `Successfully fetched params for task ${task} and param_type ${param_type}`
     );
-    return await response.json();
+
+    const data = await response.json();
+
+    console.log("response data from /ui/fetch_params: ", data);
+    return data;
   } catch (error) {
     console.error(
       `Error fetching params for task ${task} and param_type ${param_type}:`,

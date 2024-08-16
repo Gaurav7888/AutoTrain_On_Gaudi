@@ -17,7 +17,6 @@ NOTE: AutoTrain is free! You only pay for the resources you use in case you deci
 HPUs offer fast model training and inference as well as a great price-performance ratio.
 Check out [this blog post about BLOOM inference](https://huggingface.co/blog/habana-gaudi-2-bloom) and [this post benchmarking Intel Gaudi 2 and NVIDIA A100 GPUs for BridgeTower training](https://huggingface.co/blog/bridgetower) for concrete examples.
 
-
 ## Gaudi Setup
 
 Please refer to the Intel Gaudi AI Accelerator official [installation guide](https://docs.habana.ai/en/latest/Installation_Guide/index.html).
@@ -31,7 +30,7 @@ Please refer to the Intel Gaudi AI Accelerator official [installation guide](htt
 You can Install AutoTrain-Advanced python package via PIP. Please note you will need python >= 3.10 for AutoTrain Advanced to work properly.
 
     pip install autotrain-advanced
-    
+
 Please make sure that you have git lfs installed. Check out the instructions here: https://github.com/git-lfs/git-lfs/wiki/Installation
 
 You also need to install torch, torchaudio and torchvision.
@@ -47,17 +46,18 @@ Once done, you can start the application using:
 
     autotrain app --port 8080 --host 127.0.0.1
 
-
 If you are not fond of UI, you can use AutoTrain Configs to train using command line or simply AutoTrain CLI.
 
 To use config file for training, you can use the following command:
 
     autotrain --config <path_to_config_file>
 
-
 You can find sample config files in the `configs` directory of this repository.
-
 
 ## Documentation
 
-Documentation is available at 
+Run only FastAPI Server:
+
+```bash
+uvicorn app:app --port 8080 --reload --workers 4
+```
