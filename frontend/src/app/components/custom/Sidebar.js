@@ -25,9 +25,14 @@ export default function Sidebar({
   task,
   setTask,
   handleInputChange,
+  paramType,
+  setParamType,
 }) {
-  const handleChange = (e) => {
+  const handleTaskChange = (e) => {
     setTask(e.target.value);
+  };
+  const handleParamTypeChange = (e) => {
+    setParamType(e.target.value);
   };
   return (
     <Box
@@ -135,7 +140,7 @@ export default function Sidebar({
                   borderColor: "indigo.500",
                 },
               }}
-              onChange={handleChange}
+              onChange={handleTaskChange}
               value={task}
             >
               <optgroup label="LLM Finetuning"></optgroup>
@@ -290,6 +295,7 @@ export default function Sidebar({
                   borderColor: "indigo.500",
                 },
               }}
+              onChange={handleParamTypeChange}
             >
               <MenuItem value="basic">Basic</MenuItem>
               <MenuItem value="full">Full</MenuItem>
