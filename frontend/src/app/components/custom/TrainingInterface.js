@@ -21,14 +21,14 @@ const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
   const [showJsonParameters, setShowJsonParameters] = useState(false);
   const [baseModelCustom, setBaseModelCustom] = useState(false);
   const [datasetSource, setDatasetSource] = useState("local");
-  const [params, setParams] = useState({});
+  const [initialParams, setInitialParams] = useState({});
 
   useEffect(() => {
     // Fetch initial data
     const fetchData = async () => {
       try {
         const res = await fetchParams(task, paramType);
-        setParams(res);
+        setInitialParams(res);
         console.log(`params for ${task}: ${res}`);
       } catch (error) {
         console.error("Error fetching and setting params:", error);
@@ -40,6 +40,26 @@ const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
     fetchTrainingStatus();
     fetchBaseModels();
   }, [task, paramType]);
+
+  const handleSelectChange = (key) => (event) => {
+    setParams((prevParams) => ({
+      ...prevParams,
+      [key]: {
+        ...prevParams[key],
+        default: event.target.value,
+      },
+    }));
+  };
+
+  const handleInputChange = (key) => (event) => {
+    setParams((prevParams) => ({
+      ...prevParams,
+      [key]: {
+        ...prevParams[key],
+        default: event.target.value,
+      },
+    }));
+  };
 
   const fetchAccelerators = () => {
     // Implement fetching accelerators
@@ -200,7 +220,7 @@ const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
                   marginTop: "-1rem",
                 }}
               >
-                {Object.entries(params).map(([key, config]) => {
+                {Object.entries(initialParams).map(([key, config]) => {
                   switch (config.type) {
                     case "dropdown":
                       return (
@@ -221,6 +241,7 @@ const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
                             id={key}
                             name={key}
                             label={config.label}
+                            onChange={handleSelectChange(key)}
                           >
                             {config.options.map((option) => (
                               <MenuItem key={option} value={option}>
@@ -238,6 +259,7 @@ const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
                           label={config.label}
                           type="number"
                           defaultValue={config.default}
+                          onChange={handleInputChange(key)}
                           margin="normal"
                           id={key}
                           name={key}
@@ -255,6 +277,7 @@ const TrainingInterface = ({ task, setTask, paramType, setParamType }) => {
                           label={config.label}
                           type="text"
                           defaultValue={config.default}
+                          onChange={handleInputChange(key)}
                           margin="normal"
                           id={key}
                           name={key}
