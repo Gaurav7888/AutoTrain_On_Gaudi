@@ -61,3 +61,15 @@ Run only FastAPI Server:
 ```bash
 uvicorn app:app --port 8080 --reload --workers 4
 ```
+
+## Flow for starting training
+
+1. use /params/{task}/{param_type} to fetch params for a given task and param_type (basic or full)
+2. fetch model choices from /model_choices/{task} to get the right models
+3. send the right params to /create_project in the right format
+4. training starts:
+   - show logs from /logs
+   - show help text from /help/{element_id}
+   - show available accelerators from /accelerators
+   - show if model is training from /is_model_training
+   - stop training from /stop_training
