@@ -20,8 +20,8 @@ export default function HomePage() {
   ]
 
   const handleSetConfigKey = (key, value, params) => {
-    if (params[key].type == "boolean") { 
-      value = value == "true" ? true : false;
+    if (params[key].type == "dropdown") { 
+      value = value == "true" ? true : value;
     }
     if (params[key].type == "number") {
       value = parseInt(value);
@@ -54,12 +54,16 @@ export default function HomePage() {
         })
       }
 
+
       newParams[key] = {
         type: type,
         label: val.label,
         default: defaultVal,
-        options: newOpts
       }
+      if (type == "dropdown") {
+        newParams[key].options = newOpts;
+      }
+      console.log(newParams[key]);
     })
     return newParams;
   }
@@ -176,7 +180,7 @@ export default function HomePage() {
                         size="small"
                         name={k}
                         onChange={(e) => {
-                          handleSetConfigKey(k, e.target.value);
+                          handleSetConfigKey(k, e.target.value, params);
                         }}
                       >
                         {options.map((option) => (
@@ -192,7 +196,7 @@ export default function HomePage() {
                         value={config[k]}
                         name={k}
                         onChange={(event) => {
-                          handleSetConfigKey(k, event.target.value);
+                          handleSetConfigKey(k, event.target.value, params);
                         }}
                         size="small"
                       />
