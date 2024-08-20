@@ -144,3 +144,6 @@ dmypy.json
 
 # includes output for training models
 out
+
+node_modules
+.next
