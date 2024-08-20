@@ -828,7 +828,7 @@ async def fetch_help(element_id: str, authenticated: bool = Depends(user_authent
     msg = get_app_help(element_id)
     return {"message": msg}
 
-
+# TODO: Use for more number of HPU cards
 @ui_router.get("/accelerators", response_class=JSONResponse)
 async def available_accelerators(authenticated: bool = Depends(user_authentication)):
     """
@@ -847,7 +847,7 @@ async def available_accelerators(authenticated: bool = Depends(user_authenticati
         num_gpus = 0
     return {"accelerators": num_gpus}
 
-
+## TODO: Convert to websocket
 @ui_router.get("/is_model_training", response_class=JSONResponse)
 async def is_model_training(authenticated: bool = Depends(user_authentication)):
     """
@@ -861,7 +861,9 @@ async def is_model_training(authenticated: bool = Depends(user_authentication)):
         return {"model_training": True, "pids": running_jobs}
     return {"model_training": False, "pids": []}
 
-
+## TODO: Profiling
+## TODO: TFLOPS
+## TODO: Gaudi specific metrics
 @ui_router.get("/logs", response_class=JSONResponse)
 async def fetch_logs(authenticated: bool = Depends(user_authentication)):
     """

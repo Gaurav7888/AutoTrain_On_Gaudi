@@ -50,7 +50,6 @@ class TextClassificationParams(TextClassificationGaudiParams):
     batch_size: int = Field(8, title="Training batch size")
     gradient_accumulation: int = Field(1, title="Gradient accumulation steps")
     optimizer: str = Field("adamw_torch", title="Optimizer")
-    scheduler: str = Field("linear", title="Scheduler")
     train_split: str = Field("train", title="Train split")
     valid_split: Optional[str] = Field(None, title="Validation split")
     text_column: str = Field("text", title="Text column")
@@ -61,4 +60,3 @@ class TextClassificationParams(TextClassificationGaudiParams):
     username: Optional[str] = Field(None, title="Hugging Face Username")
     log: str = Field("none", title="Logging using experiment tracking")
     early_stopping_patience: int = Field(5, title="Early stopping patience")
-    early_stopping_threshold: float = Field(0.01, title="Early stopping threshold")
