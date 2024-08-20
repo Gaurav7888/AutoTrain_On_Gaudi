@@ -144,3 +144,8 @@ dmypy.json
 
 # includes output for training models
 out
+# run logs
+src/autotrain/trainers/*/runs/
+src/autotrain/trainers/*/checkpoint-*/
+src/autotrain/trainers/*/hl-smi_log.txt
+src/autotrain/trainers/*/.graph_dumps/
