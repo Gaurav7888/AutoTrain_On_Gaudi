@@ -142,8 +142,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# includes output for training models
-out
-
-node_modules
+# Next
 .next
+node_modules
