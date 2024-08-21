@@ -58,7 +58,7 @@ export default function App({ Component, pageProps }) {
                 textDecoration: "none",
               }}
             >
-              AutoTrain
+              Gaudi Training Platform
             </Typography>
 
             <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>

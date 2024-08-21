@@ -1,42 +1,64 @@
-import React, {useEffect, useState} from 'react'
-import { Box, TextField, MenuItem, Typography, Grid, Button } from '@mui/material';
-import axios from 'axios';
-import { SERVER_URL } from '@/lib/constants';
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Box,
+  TextField,
+  MenuItem,
+  Typography,
+  Grid,
+  Button,
+} from "@mui/material";
+import axios from "axios";
+import { SERVER_URL } from "@/lib/constants";
 
 export default function HomePage() {
-
   const [task, setTask] = useState("");
-  const [params, setParams] = useState({})
-  const [config, setConfig] = useState({})
+  const [params, setParams] = useState({});
+  const [modelChoice, setModelChoice] = useState([]);
+  const [selectedModel, setSelectedModel] = useState("");
+  const [config, setConfig] = useState({});
   const [showTrainingConfig, setShowTrainingConfig] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [datasetName, setDatasetName] = useState("");
+  const [isSaved, setIsSaved] = useState(false);
+  const [parameterType, setParameterType] = useState("");
 
   // TODO: Update to fetch from API
   const tasksOpts = [
-    { value: "text-classification", label: "Text Classification" },
-    { value: "text-regression", label: "Text Regression" },
-    { value: "audio-classification", label: "Audio Classification" },
+    { value: "llm:sft", label: "LLM: Supervised Finetuning" },
+    { value: "llm:generic", label: "LLM: Generic" },
+    { value: "text-classification", label: "Text: Text Classification" },
+    { value: "text-regression", label: "Text: Text Regression" },
+    { value: "audio-classification", label: "Audio: Audio Classification" },
     { value: "causual-language-modeling", label: "Causal Language Modeling" },
-  ]
+  ];
 
   const handleSetConfigKey = (key, value, params) => {
-    if (params[key].type == "boolean") { 
-      value = value == "true" ? true : false;
+    if (params && params[key]) {
+      if (params[key].type === "boolean") {
+        value = value === "true";
+      }
+      if (params[key].type === "number") {
+        value = parseInt(value);
+      }
+      if (params[key].type === "float") {
+        value = parseFloat(value);
+      }
     }
-    if (params[key].type == "number") {
-      value = parseInt(value);
-    }
-    if (params[key].type == "float") { 
-      value = parseFloat(value);
-    }
-    
+
     setConfig((prev) => {
       return {
         ...prev,
-        [key]: value
-      }
+        [key]: value,
+      };
     });
-  }
+    console.log("Setting key: ", key, " with value: ", value);
+    console.log("Config: ", config);
+  };
+
+  const handleSave = () => {
+    handleSetConfigKey("dataset_name", datasetName, null);
+    setIsSaved(true);
+  };
 
   const sanitizeParams = (params) => {
     let newParams = {};
@@ -45,41 +67,101 @@ export default function HomePage() {
       let val = params[key];
       let type = val.type;
       let def = val.default;
-      let defaultVal = typeof def == "boolean" ? def == true ? "true" : "false" : def;
+      let defaultVal =
+        typeof def == "boolean" ? (def == true ? "true" : "false") : def;
       let options = type == "dropdown" ? val.options : [];
-      let newOpts = []
+      let newOpts = [];
       if (type == "dropdown") {
         newOpts = options.map((op) => {
-          return op == true ? "true" : op == false ? "false" : op
-        })
+          return op == true ? "true" : op == false ? "false" : op;
+        });
       }
 
       newParams[key] = {
         type: type,
         label: val.label,
         default: defaultVal,
-        options: newOpts
-      }
-    })
+        options: newOpts,
+      };
+    });
     return newParams;
-  }
+  };
 
-  const handleTaskChange = (event) => {
-    setShowTrainingConfig(true)
+  const handleModelChoiceChange = (event) => {
+    setIsSaved(false);
     let val = event.target.value;
-    setTask(val);
-    let url = SERVER_URL + `/ui/params/` + val + `/basic` 
+    setSelectedModel(val);
+
+    const selectedChoice = modelChoice.find((choice) => choice.name === val);
+
+    let key = "model_name_or_path";
+    handleSetConfigKey(key, selectedChoice.name, selectedChoice);
+
+    console.log("Model choice changed");
+  };
+
+  useEffect(() => {
+    const handleRetrieveModelChoices = (task) => {
+      if (task == "") {
+        console.log("Task is not chosen");
+        return;
+      }
+      let url = SERVER_URL + `/ui/model_choices/` + task;
+      axios.get(url).then((resp) => {
+        let choice = resp.data;
+        console.log("resp: ", resp);
+        console.log("choice: ", choice);
+        setModelChoice(choice);
+      });
+      console.log("Model choices retrieved", modelChoice);
+    };
+    if (task !== "" && parameterType !== "") {
+      handleRetrieveModelChoices(task);
+    }
+  }, [task, parameterType]);
+
+  const fetchAndSetParams = (task, parameterType) => {
+    let url = `${SERVER_URL}/ui/params/${task}/${parameterType}`;
     axios.get(url).then((resp) => {
+      console.log("params fetched");
       let _params = sanitizeParams(resp.data);
       setParams(_params);
+      console.log("Params: ", _params);
       Object.keys(_params).forEach((key) => {
         handleSetConfigKey(key, _params[key].default, _params);
       });
-    })
-  }
+    });
+  };
 
-  const handleStartTraining = () => { 
-    let url = SERVER_URL + `/ui/create_project`
+  const handleParameterTypeChange = (event) => {
+    const newParameterType = event.target.value;
+    setParameterType(newParameterType);
+    setIsSaved(false);
+    // if (task === "") return;
+    setShowTrainingConfig(true);
+    console.log("before ");
+    fetchAndSetParams(task, newParameterType);
+    console.log("Parameter type changed", newParameterType);
+  };
+
+  const handleTaskChange = (event) => {
+    const newTask = event.target.value;
+    setTask(newTask);
+    setIsSaved(false);
+    if (parameterType === "") return;
+    setShowTrainingConfig(true);
+    fetchAndSetParams(newTask, parameterType);
+    console.log("Task changed");
+  };
+
+  useEffect(() => {
+    if (task !== "" && parameterType !== "") {
+      fetchAndSetParams(task, parameterType);
+    }
+  }, [task, parameterType]);
+
+  const handleStartTraining = () => {
+    let url = SERVER_URL + `/ui/create_project`;
     let payload = {
       task: task,
       params: config,
@@ -90,18 +172,21 @@ export default function HomePage() {
       hub_dataset: config.dataset_name, // TODO: update this
       train_split: "train", // TODO: update this
       valid_split: "test", // TODO: update this
-      username: "thebeginner86"
+      username: "thebeginner86",
     };
-    axios.post(url, JSON.stringify(payload), {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then((resp) => { 
-      console.log(resp.data);
-    }).catch((err) => { console.error(err) });
-  }
-
-  useEffect(() => { }, [config]);
+    axios
+      .post(url, JSON.stringify(payload), {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      .then((resp) => {
+        console.log(resp.data);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  };
 
   return (
     <>
@@ -113,13 +198,28 @@ export default function HomePage() {
         noValidate
         autoComplete="off"
       >
-        <div>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+          }}
+        >
           <TextField
             id="outlined-controlled"
             label="Project Name"
             value={projectName}
             onChange={(event) => {
               setProjectName(event.target.value);
+            }}
+            size="small"
+          />
+          <TextField
+            id="outlined-controlled"
+            label="Dataset Name"
+            value={datasetName}
+            onChange={(event) => {
+              setDatasetName(event.target.value);
+              console.log("Dataset name changed to: ", datasetName);
             }}
             size="small"
           />
@@ -139,7 +239,43 @@ export default function HomePage() {
               </MenuItem>
             ))}
           </TextField>
-        </div>
+          <TextField
+            id="outlined-select-currency"
+            select
+            label="Choose Parameter Type"
+            value={parameterType}
+            onChange={(e) => {
+              handleParameterTypeChange(e);
+            }}
+            size="small"
+          >
+            <MenuItem key="basic" value="basic">
+              Basic
+            </MenuItem>
+            <MenuItem key="Full" value="full">
+              Advanced
+            </MenuItem>
+          </TextField>
+          <TextField
+            id="outlined-select-model"
+            select
+            label="Choose Model"
+            value={selectedModel}
+            onChange={(e) => {
+              handleModelChoiceChange(e);
+            }}
+            size="small"
+          >
+            {modelChoice.map((option) => (
+              <MenuItem key={option.id} value={option.name}>
+                {option.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button variant="contained" onClick={handleSave} size="small">
+            Save
+          </Button>
+        </Box>
       </Box>
       {showTrainingConfig && (
         <>
@@ -207,8 +343,9 @@ export default function HomePage() {
               variant="contained"
               color="primary"
               onClick={() => handleStartTraining()}
+              disabled={isSaved}
             >
-              Start
+              Start Training
             </Button>
           </Box>
         </>
