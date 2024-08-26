@@ -123,7 +123,7 @@ export default function HomePage() {
   const fetchAndSetParams = (task, parameterType) => {
     let url = `${SERVER_URL}/ui/params/${task}/${parameterType}`;
     axios.get(url).then((resp) => {
-      console.log("params fetched");
+      console.log("params fetched from ", SERVER_URL);
       let _params = sanitizeParams(resp.data);
       setParams(_params);
       console.log("Params: ", _params);

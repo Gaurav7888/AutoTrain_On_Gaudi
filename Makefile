@@ -50,7 +50,10 @@ pip:
 	twine upload dist/* --verbose --repository autotrain-advanced
 
 server:
-	uvicorn src.autotrain.app.app:app --port 8080 --reload --workers 4
+	uvicorn src.autotrain.app.app:app --port 8080 --reload --workers 4 --host 0.0.0.0
 
 ui:
-	cd frontend && npm run dev
+	cd ui && npm run dev
+
+app:
+	autotrain app --port 8000 --host 0.0.0.0
