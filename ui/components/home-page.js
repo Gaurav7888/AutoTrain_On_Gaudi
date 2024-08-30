@@ -4,6 +4,7 @@ import {
   Stepper,
   Step,
   StepLabel,
+  StepButton,
   Button,
   Typography,
   TextField,
@@ -125,10 +126,10 @@ export default function HomePage() {
       });
       console.log("Model choices retrieved", modelChoice);
     };
-    if (task !== "" && parameterType !== "") {
+    if (task !== "") {
       handleRetrieveModelChoices(task);
     }
-  }, [task, parameterType]);
+  }, [task]);
 
   const fetchAndSetParams = (task, parameterType) => {
     let url = `${SERVER_URL}/ui/params/${task}/${parameterType}`;
@@ -221,12 +222,17 @@ export default function HomePage() {
     setActiveStep(0);
   };
 
+  const handleStep = (step) => () => {
+    setActiveStep(step);
+  };
+
   const getStepContent = (step) => {
     switch (step) {
       case 0:
         return (
           <Box>
             <TextField
+              id="1"
               label="Project Name"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
@@ -234,6 +240,7 @@ export default function HomePage() {
               margin="normal"
             />
             <TextField
+              id="2"
               label="Dataset Name"
               value={datasetName}
               onChange={(e) => setDatasetName(e.target.value)}
@@ -274,17 +281,7 @@ export default function HomePage() {
         return (
           <Box>
             <TextField
-              select
-              label="Choose Parameter Type"
-              value={parameterType}
-              onChange={handleParameterTypeChange}
-              fullWidth
-              margin="normal"
-            >
-              <MenuItem value="basic">Basic</MenuItem>
-              <MenuItem value="full">Advanced</MenuItem>
-            </TextField>
-            <TextField
+              id="4"
               select
               label="Choose Model"
               value={selectedModel}
@@ -303,6 +300,18 @@ export default function HomePage() {
       case 2:
         return (
           <Box>
+            <TextField
+              id="3"
+              select
+              label="Choose Parameter Type"
+              value={parameterType}
+              onChange={handleParameterTypeChange}
+              fullWidth
+              margin="normal"
+            >
+              <MenuItem value="basic">Basic</MenuItem>
+              <MenuItem value="full">Advanced</MenuItem>
+            </TextField>
             <Typography variant="h6">Training Configuration</Typography>
             <Grid container spacing={2}>
               {Object.keys(params).map((k) => {
@@ -327,6 +336,7 @@ export default function HomePage() {
                       </TextField>
                     ) : (
                       <TextField
+                        id="5"
                         label={label}
                         value={config[k] || ""}
                         onChange={(e) => handleSetConfigKey(k, e.target.value)}
@@ -359,7 +369,9 @@ export default function HomePage() {
           const labelProps = {};
           return (
             <Step key={label} {...stepProps}>
-              <StepLabel {...labelProps}>{label}</StepLabel>
+              <StepButton onClick={handleStep(index)}>
+                <StepLabel {...labelProps}>{label}</StepLabel>
+              </StepButton>
             </Step>
           );
         })}
