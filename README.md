@@ -59,8 +59,35 @@ You can find sample config files in the `configs` directory of this repository.
 Run only FastAPI Server:
 
 ```bash
-uvicorn app:app --port 8080 --reload --workers 4
+make server
 ```
+
+Run only UI:
+
+```bash
+make ui
+```
+
+Run Autotrain App:
+
+```bash
+make app
+```
+## Installation
+
+1. ```bash
+    pip install -e .
+    ```
+
+2. ```bash
+    pip install autotrain-advanced
+    ```
+
+3. ```bash
+    cd ui && npm i
+    ```
+    
+4. Change HF_TOKEN in `./install/Makefile.core.mk`
 
 ## Flow for starting training
 
