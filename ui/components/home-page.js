@@ -1,17 +1,26 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
+  Stepper,
+  Step,
+  StepLabel,
+  Button,
+  Typography,
   TextField,
   MenuItem,
-  Typography,
   Grid,
-  Button,
+  Card,
+  CardActionArea,
+  CardContent,
 } from "@mui/material";
+
+const steps = ["Project Details", "Model Selection", "Parameters", "Script"];
 import axios from "axios";
 import { SERVER_URL } from "@/lib/constants";
 
 export default function HomePage() {
   const [task, setTask] = useState("");
+  const [selectedTask, setSelectedTask] = useState(null);
   const [params, setParams] = useState({});
   const [modelChoice, setModelChoice] = useState([]);
   const [selectedModel, setSelectedModel] = useState("");
@@ -21,6 +30,7 @@ export default function HomePage() {
   const [datasetName, setDatasetName] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [parameterType, setParameterType] = useState("");
+  const [activeStep, setActiveStep] = useState(0);
 
   // TODO: Update to fetch from API
   const tasksOpts = [
@@ -144,14 +154,25 @@ export default function HomePage() {
     console.log("Parameter type changed", newParameterType);
   };
 
-  const handleTaskChange = (event) => {
-    const newTask = event.target.value;
-    setTask(newTask);
-    setIsSaved(false);
-    if (parameterType === "") return;
-    setShowTrainingConfig(true);
-    fetchAndSetParams(newTask, parameterType);
-    console.log("Task changed");
+  const handleTaskChange = (newTask) => {
+    if (selectedTask === newTask) {
+      // Deselect the task if it's clicked again
+      setSelectedTask(null);
+      setTask("");
+      setIsSaved(false);
+      setShowTrainingConfig(false);
+      console.log("Task deselected");
+    } else {
+      // Select the new task
+      setSelectedTask(newTask);
+      setTask(newTask);
+      setIsSaved(false);
+      if (parameterType !== "") {
+        setShowTrainingConfig(true);
+        fetchAndSetParams(newTask, parameterType);
+      }
+      console.log("Task changed");
+    }
   };
 
   useEffect(() => {
@@ -188,132 +209,115 @@ export default function HomePage() {
       });
   };
 
-  return (
-    <>
-      <Box
-        component="form"
-        sx={{
-          "& .MuiTextField-root": { m: 1, width: "25ch" },
-        }}
-        noValidate
-        autoComplete="off"
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "row",
-          }}
-        >
-          <TextField
-            id="outlined-controlled"
-            label="Project Name"
-            value={projectName}
-            onChange={(event) => {
-              setProjectName(event.target.value);
-            }}
-            size="small"
-          />
-          <TextField
-            id="outlined-controlled"
-            label="Dataset Name"
-            value={datasetName}
-            onChange={(event) => {
-              setDatasetName(event.target.value);
-              console.log("Dataset name changed to: ", datasetName);
-            }}
-            size="small"
-          />
-          <TextField
-            id="outlined-select-currency"
-            select
-            label="Choose Task"
-            value={task}
-            onChange={(e) => {
-              handleTaskChange(e);
-            }}
-            size="small"
-          >
-            {tasksOpts.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            id="outlined-select-currency"
-            select
-            label="Choose Parameter Type"
-            value={parameterType}
-            onChange={(e) => {
-              handleParameterTypeChange(e);
-            }}
-            size="small"
-          >
-            <MenuItem key="basic" value="basic">
-              Basic
-            </MenuItem>
-            <MenuItem key="Full" value="full">
-              Advanced
-            </MenuItem>
-          </TextField>
-          <TextField
-            id="outlined-select-model"
-            select
-            label="Choose Model"
-            value={selectedModel}
-            onChange={(e) => {
-              handleModelChoiceChange(e);
-            }}
-            size="small"
-          >
-            {modelChoice.map((option) => (
-              <MenuItem key={option.id} value={option.name}>
-                {option.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button variant="contained" onClick={handleSave} size="small">
-            Save
-          </Button>
-        </Box>
-      </Box>
-      {showTrainingConfig && (
-        <>
-          <Box
-            component="form"
-            sx={{
-              "& .MuiTextField-root": { m: 1, width: "25ch" },
-            }}
-            noValidate
-            autoComplete="off"
-          >
-            <Box>
-              <Typography variant="h5">Training Configuration</Typography>
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  const handleReset = () => {
+    setActiveStep(0);
+  };
+
+  const getStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <Box>
+            <TextField
+              label="Project Name"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              label="Dataset Name"
+              value={datasetName}
+              onChange={(e) => setDatasetName(e.target.value)}
+              fullWidth
+              margin="normal"
+            />
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+              }}
+            >
+              {tasksOpts.map((option) => (
+                <Card
+                  onClick={() => handleTaskChange(option.value)}
+                  key={option.value}
+                  sx={{
+                    margin: 1,
+                    backgroundColor:
+                      selectedTask === option.value ? "#e0f8ff" : "white",
+                    transition: "background-color 0.3s",
+                    "&:hover": {
+                      backgroundColor: "#e0e0e0",
+                    },
+                  }}
+                >
+                  <CardActionArea>
+                    <CardContent>
+                      <Typography>{option.label}</Typography>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              ))}
             </Box>
-            <Grid container>
+          </Box>
+        );
+      case 1:
+        return (
+          <Box>
+            <TextField
+              select
+              label="Choose Parameter Type"
+              value={parameterType}
+              onChange={handleParameterTypeChange}
+              fullWidth
+              margin="normal"
+            >
+              <MenuItem value="basic">Basic</MenuItem>
+              <MenuItem value="full">Advanced</MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Choose Model"
+              value={selectedModel}
+              onChange={handleModelChoiceChange}
+              fullWidth
+              margin="normal"
+            >
+              {modelChoice.map((option) => (
+                <MenuItem key={option.id} value={option.name}>
+                  {option.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+        );
+      case 2:
+        return (
+          <Box>
+            <Typography variant="h6">Training Configuration</Typography>
+            <Grid container spacing={2}>
               {Object.keys(params).map((k) => {
                 let type = params[k].type;
                 let label = params[k].label;
                 let options = params[k].options;
                 return (
-                  <Grid
-                    item
-                    sx={{
-                      margin: "0.1rem",
-                    }}
-                    key={k}
-                  >
-                    {type == "dropdown" ? (
+                  <Grid item xs={12} sm={6} key={k}>
+                    {type === "dropdown" ? (
                       <TextField
-                        id="outlined-select-currency"
                         select
                         label={`Choose ${label}`}
-                        value={config[k]}
-                        size="small"
-                        name={k}
-                        onChange={(e) => {
-                          handleSetConfigKey(k, e.target.value);
-                        }}
+                        value={config[k] || ""}
+                        onChange={(e) => handleSetConfigKey(k, e.target.value)}
+                        fullWidth
                       >
                         {options.map((option) => (
                           <MenuItem key={option} value={option}>
@@ -323,14 +327,10 @@ export default function HomePage() {
                       </TextField>
                     ) : (
                       <TextField
-                        id="outlined-controlled"
                         label={label}
-                        value={config[k]}
-                        name={k}
-                        onChange={(event) => {
-                          handleSetConfigKey(k, event.target.value);
-                        }}
-                        size="small"
+                        value={config[k] || ""}
+                        onChange={(e) => handleSetConfigKey(k, e.target.value)}
+                        fullWidth
                       />
                     )}
                   </Grid>
@@ -338,18 +338,62 @@ export default function HomePage() {
               })}
             </Grid>
           </Box>
+        );
+      case 3:
+        return (
           <Box>
+            <Typography variant="h6">Script Component</Typography>
+            {/* Add your script component here */}
+          </Box>
+        );
+      default:
+        return "Unknown step";
+    }
+  };
+
+  return (
+    <Box sx={{ width: "100%" }}>
+      <Stepper activeStep={activeStep}>
+        {steps.map((label, index) => {
+          const stepProps = {};
+          const labelProps = {};
+          return (
+            <Step key={label} {...stepProps}>
+              <StepLabel {...labelProps}>{label}</StepLabel>
+            </Step>
+          );
+        })}
+      </Stepper>
+      {activeStep === steps.length ? (
+        <React.Fragment>
+          <Typography sx={{ mt: 2, mb: 1 }}>
+            All steps completed - you&apos;re finished
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
+            <Box sx={{ flex: "1 1 auto" }} />
+            <Button onClick={handleReset}>Reset</Button>
+          </Box>
+        </React.Fragment>
+      ) : (
+        <React.Fragment>
+          <Typography sx={{ mt: 2, mb: 1 }}>Step {activeStep + 1}</Typography>
+          <Box sx={{ mt: 2, mb: 1 }}>{getStepContent(activeStep)}</Box>
+          <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
             <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleStartTraining()}
-              disabled={isSaved}
+              color="inherit"
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              sx={{ mr: 1 }}
             >
-              Start Training
+              Back
+            </Button>
+            <Box sx={{ flex: "1 1 auto" }} />
+            <Button onClick={handleNext}>
+              {activeStep === steps.length - 1 ? "Finish" : "Next"}
             </Button>
           </Box>
-        </>
+        </React.Fragment>
       )}
-    </>
+    </Box>
   );
 }
