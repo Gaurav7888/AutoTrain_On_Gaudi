@@ -41,6 +41,7 @@ export default function HomePage() {
     { value: "text-regression", label: "Text: Text Regression" },
     { value: "audio-classification", label: "Audio: Audio Classification" },
     { value: "causual-language-modeling", label: "Causal Language Modeling" },
+    // TODO: Add only implemented tasks here
   ];
 
   const handleSetConfigKey = (key, value, params) => {
@@ -148,7 +149,6 @@ export default function HomePage() {
     const newParameterType = event.target.value;
     setParameterType(newParameterType);
     setIsSaved(false);
-    // if (task === "") return;
     setShowTrainingConfig(true);
     console.log("before ");
     fetchAndSetParams(task, newParameterType);
@@ -230,38 +230,61 @@ export default function HomePage() {
     switch (step) {
       case 0:
         return (
-          <Box>
-            <TextField
-              id="1"
-              label="Project Name"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              id="2"
-              label="Dataset Name"
-              value={datasetName}
-              onChange={(e) => setDatasetName(e.target.value)}
-              fullWidth
-              margin="normal"
-            />
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              gap: "1rem",
+            }}
+          >
             <Box
               sx={{
                 display: "flex",
                 flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+              }}
+            >
+              <TextField
+                id="1"
+                label="Project Name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                margin="normal"
+                fullWidth
+              />
+              <TextField
+                id="2"
+                label="Dataset Name"
+                value={datasetName}
+                onChange={(e) => setDatasetName(e.target.value)}
+                margin="normal"
+                fullWidth
+              />
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-evenly",
+                gap: "1rem",
+                flexWrap: "wrap",
               }}
             >
               {tasksOpts.map((option) => (
                 <Card
+                  elevation={3}
                   onClick={() => handleTaskChange(option.value)}
                   key={option.value}
                   sx={{
-                    margin: 1,
+                    // margin: 1,
                     backgroundColor:
                       selectedTask === option.value ? "#e0f8ff" : "white",
                     transition: "background-color 0.3s",
+                    width: "30%",
                     "&:hover": {
                       backgroundColor: "#e0e0e0",
                     },
@@ -362,7 +385,7 @@ export default function HomePage() {
   };
 
   return (
-    <Box sx={{ width: "100%" }}>
+    <Box sx={{ width: "60%" }}>
       <Stepper activeStep={activeStep}>
         {steps.map((label, index) => {
           const stepProps = {};
@@ -377,17 +400,17 @@ export default function HomePage() {
         })}
       </Stepper>
       {activeStep === steps.length ? (
-        <React.Fragment>
+        <>
           <Typography sx={{ mt: 2, mb: 1 }}>
-            All steps completed - you&apos;re finished
+            All steps completed - you're finished
           </Typography>
           <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
             <Box sx={{ flex: "1 1 auto" }} />
             <Button onClick={handleReset}>Reset</Button>
           </Box>
-        </React.Fragment>
+        </>
       ) : (
-        <React.Fragment>
+        <>
           <Typography sx={{ mt: 2, mb: 1 }}>Step {activeStep + 1}</Typography>
           <Box sx={{ mt: 2, mb: 1 }}>{getStepContent(activeStep)}</Box>
           <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
@@ -404,7 +427,7 @@ export default function HomePage() {
               {activeStep === steps.length - 1 ? "Finish" : "Next"}
             </Button>
           </Box>
-        </React.Fragment>
+        </>
       )}
     </Box>
   );
