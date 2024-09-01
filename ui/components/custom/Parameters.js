@@ -1,11 +1,13 @@
 // ./custom/Parameters.js
 import React, { useState, useEffect } from "react";
 import { Box, TextField, Typography, Grid, MenuItem } from "@mui/material";
+import CircularProgress from "@mui/material/CircularProgress";
 import axios from "axios";
 import { SERVER_URL } from "@/lib/constants";
 
 export default function Parameters({ projectData, onDataChange }) {
   const [params, setParams] = useState({});
+  const [loading, setLoading] = useState(null);
 
   useEffect(() => {
     const fetchParams = async () => {
@@ -16,6 +18,7 @@ export default function Parameters({ projectData, onDataChange }) {
           );
           const sanitizedParams = sanitizeParams(response.data);
           setParams(sanitizedParams);
+          setLoading(false);
 
           // Set default values in the config
           const defaultConfig = {};
@@ -60,6 +63,7 @@ export default function Parameters({ projectData, onDataChange }) {
   };
 
   const handleParameterTypeChange = (event) => {
+    setLoading(true);
     onDataChange({ parameterType: event.target.value });
   };
 
@@ -90,40 +94,57 @@ export default function Parameters({ projectData, onDataChange }) {
         <MenuItem value="basic">Basic</MenuItem>
         <MenuItem value="full">Advanced</MenuItem>
       </TextField>
-      <Typography variant="h6">Training Configuration</Typography>
-      <Grid container spacing={2}>
-        {Object.keys(params).map((k) => {
-          let type = params[k].type;
-          let label = params[k].label;
-          let options = params[k].options;
-          return (
-            <Grid item xs={12} sm={6} key={k}>
-              {type === "dropdown" ? (
-                <TextField
-                  select
-                  label={`Choose ${label}`}
-                  value={projectData.config[k]?.toString() || ""}
-                  onChange={(e) => handleSetConfigKey(k, e.target.value)}
-                  fullWidth
-                >
-                  {options.map((option) => (
-                    <MenuItem key={option} value={option}>
-                      {option}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              ) : (
-                <TextField
-                  label={label}
-                  value={projectData.config[k]?.toString() || ""}
-                  onChange={(e) => handleSetConfigKey(k, e.target.value)}
-                  fullWidth
-                />
-              )}
-            </Grid>
-          );
-        })}
-      </Grid>
+      <Typography variant="h6" my={2}>Training Parameters</Typography>
+      {loading ? (
+        <Typography
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+            mt: 2,
+          }}
+        >
+          <CircularProgress />
+          Loading Parameters
+        </Typography>
+      ) : (
+        <>
+          <Grid container spacing={2}>
+            {Object.keys(params).map((k) => {
+              let type = params[k].type;
+              let label = params[k].label;
+              let options = params[k].options;
+              return (
+                <Grid item xs={12} sm={6} key={k}>
+                  {type === "dropdown" ? (
+                    <TextField
+                      select
+                      label={`Choose ${label}`}
+                      value={projectData.config[k]?.toString() || ""}
+                      onChange={(e) => handleSetConfigKey(k, e.target.value)}
+                      fullWidth
+                    >
+                      {options.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  ) : (
+                    <TextField
+                      label={label}
+                      value={projectData.config[k]?.toString() || ""}
+                      onChange={(e) => handleSetConfigKey(k, e.target.value)}
+                      fullWidth
+                    />
+                  )}
+                </Grid>
+              );
+            })}
+          </Grid>
+        </>
+      )}
     </Box>
   );
 }
