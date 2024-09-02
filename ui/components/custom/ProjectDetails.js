@@ -10,12 +10,65 @@ import {
 } from "@mui/material";
 
 const tasksOpts = [
-  { value: "llm:sft", label: "LLM: Supervised Finetuning" },
-  { value: "llm:generic", label: "LLM: Generic" },
-  { value: "text-classification", label: "Text: Text Classification" },
-  { value: "text-regression", label: "Text: Text Regression" },
-  { value: "audio-classification", label: "Audio: Audio Classification" },
-  { value: "causual-language-modeling", label: "Causal Language Modeling" },
+  {
+    category: "LLM",
+    color: "#023e8a",
+    options: [
+      {
+        value: "llm:sft",
+        label: "Supervised Fine Tuning",
+        borderColor: "#0077b6",
+      },
+      {
+        value: "llm:generic",
+        label: "Causal Language Modelling",
+        borderColor: "#0077b6",
+      },
+    ],
+  },
+  {
+    category: "Text",
+    color: "#015b9f",
+    options: [
+      {
+        value: "text-classification",
+        label: "Text Classification",
+        borderColor: "#00b4d8",
+      },
+      {
+        value: "text-regression",
+        label: "Text Regression",
+        borderColor: "#00b4d8",
+      },
+    ],
+  },
+  {
+    category: "Audio",
+    color: "#0077b6",
+    options: [
+      {
+        value: "audio-classification",
+        label: "Audio Classification",
+        borderColor: "#48cae4",
+      },
+    ],
+  },
+  {
+    category: "Image",
+    color: "#0096c7",
+    options: [
+      {
+        value: "image-generation",
+        label: "Image Generation",
+        borderColor: "#ade8f4",
+      },
+      {
+        value: "image-classification",
+        label: "Image Classification",
+        borderColor: "#ade8f4",
+      },
+    ],
+  },
 ];
 
 export default function ProjectDetails({ projectData, onDataChange }) {
@@ -41,33 +94,56 @@ export default function ProjectDetails({ projectData, onDataChange }) {
           fullWidth
         />
       </Box>
+      <Typography variant="h6">Choose Task</Typography>
       <Box
         sx={{
           display: "flex",
           flexWrap: "wrap",
-          gap: "1rem",
+          // gap: "1rem",
           justifyContent: "space-evenly",
         }}
       >
-        {tasksOpts.map((option) => (
-          <Card
-            elevation={3}
-            onClick={() => handleChange("task", option.value)}
-            key={option.value}
+        {tasksOpts.map((category) => (
+          <Box
+            key={category.category}
             sx={{
-              backgroundColor:
-                projectData.task === option.value ? "#e0f8ff" : "white",
-              transition: "background-color 0.3s",
-              width: "30%",
-              "&:hover": { backgroundColor: "#e0e0e0" },
+              display: "flex",
+              flexDirection: "column",
+              flexWrap: "wrap",
+              // gap: "1rem",
+              // justifyContent: "space-evenly",
             }}
           >
-            <CardActionArea>
-              <CardContent>
-                <Typography>{option.label}</Typography>
-              </CardContent>
-            </CardActionArea>
-          </Card>
+            <Typography variant="h6" style={{ color: category.color }}>
+              {category.category}
+            </Typography>
+            {category.options.map((option) => (
+              <Box
+                onClick={() => handleChange("task", option.value)}
+                key={option.value}
+                style={{
+                  backgroundColor:
+                    projectData.task === option.value
+                      ? category.color
+                      : "white",
+                  color: projectData.task === option.value ? "white" : "black",
+                  // boxShadow:
+                  //   projectData.task === option.value
+                  //     ? "0 0 5px #2155bf"
+                  //     : "0 0 5px white",
+                  transition: "background-color 0.3s",
+                  width: "85%",
+                  cursor: "pointer",
+                  border: `2px solid ${option.borderColor}`,
+                  padding: "10px",
+                  margin: "5px 0",
+                  borderRadius: "0.7rem",
+                }}
+              >
+                {option.label}
+              </Box>
+            ))}
+          </Box>
         ))}
       </Box>
     </Box>
