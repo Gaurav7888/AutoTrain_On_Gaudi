@@ -39,6 +39,7 @@ ENABLE_NGC = int(os.environ.get("ENABLE_NGC", 0))
 ENABLE_NVCF = int(os.environ.get("ENABLE_NVCF", 0))
 AUTOTRAIN_LOCAL = int(os.environ.get("AUTOTRAIN_LOCAL", 1))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRAINERS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "trainers"))
 DB = AutoTrainDB("autotrain.db")
 MODEL_CHOICE = fetch_models()
 
@@ -622,28 +623,12 @@ async def fetch_model_choices(
         resp.append({"id": hub_model, "name": hub_model})
     return resp
 
-@ui_router.get("/get_markdown", response_class=PlainTextResponse)
-async def fetch_script():
-    markdown_path = "/root/Ervin0307/AutoTrain_On_Gaudi/markdown.md"  # Adjust the path to your markdown file
 
-    if not os.path.isfile(markdown_path):
-        raise HTTPException(status_code=404, detail="Markdown file not found")
-
-    with open(markdown_path, "r") as file:
-        content = file.read()
-    
-    return content
-
-
-@ui_router.post("/create_project", response_class=JSONResponse)
-async def handle_form(
+def process_project_creation(
     payload: APICreateProjectModel,
-    token: str = Depends(user_authentication),
-):
+    token: str = Depends(user_authentication)):
     """
-    This function is used to create a new project
-    :body: APICreateProjectModel
-    :return: JSONResponse
+    Process the project creation logic and return the necessary information.
     """
     train_split = payload.train_split
     train_split = train_split.strip()
@@ -817,20 +802,49 @@ async def handle_form(
     )
     params = app_params.munge()
     
+    return {
+        "params": params,
+        "hardware": hardware,
+        "project_name": project_name,
+        "autotrain_user": autotrain_user,
+        "task": task,
+        "data_path": data_path,
+    }
+
+
+@ui_router.get("/get_markdown", response_class=PlainTextResponse)
+async def fetch_script():
+    markdown_path = "/root/Ervin0307/AutoTrain_On_Gaudi/markdown.md"
+
+    if not os.path.isfile(markdown_path):
+        raise HTTPException(status_code=404, detail="Markdown file not found")
+
+    with open(markdown_path, "r") as file:
+        content = file.read()
+    
+    return content
+
+
+@ui_router.post("/create_project", response_class=JSONResponse)
+async def handle_form(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication),
+):
+    """
+    This function is used to create a new project
+    :body: APICreateProjectModel
+    :return: JSONResponse
+    """
+    project_info = process_project_creation(payload, token)
+    params = project_info["params"]
+
     command = launch_command(params, ".")
     command = ' '.join(command)
-# Replace hyphens with underscores
-    task = task.replace("-", "_")
-    # Add a bunvh of if statements because the format of the Task if different for each
-    # LLM:sft
-    #LLM:generic
 
-    #/model-choices/clm not implemented
-    print("\n\nTask: ", task)
+    task = project_info["task"].replace("-", "_")
 
-    script_path = f"/root/Ervin0307/AutoTrain_On_Gaudi/src/autotrain/trainers/{task}/__main__.py"
-    # Name of the function to extract
-    function_name = 'train'
+    script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
+    extract_function_name = 'train'
 
     # Load the script as a module
     spec = None
@@ -841,8 +855,8 @@ async def handle_form(
         spec.loader.exec_module(module)
 
     # Extract the function source code
-    if spec is not None and hasattr(module, function_name):
-        function = getattr(module, function_name)
+    if spec is not None and hasattr(module, extract_function_name):
+        function = getattr(module, extract_function_name)
         function_source = inspect.getsource(function)
         
         # Path to save the markdown file
@@ -853,29 +867,39 @@ async def handle_form(
             md_file.write(f"Command:\n`{command}`\n\n")
             if function_source:
                 md_file.write(f"Script:\n```python\n{function_source}\n```")
-            print(f"Command and function {function_name} have been written to {markdown_path}")
+            logger.info(f"Command and function {extract_function_name} have been written to {markdown_path}")
     else:
-        print(f"Could not find function {function_name} in {script_path}")
-    return {"success": "true", "command": command}
+        logger.error(f"Could not find function {extract_function_name} in {script_path}")
+    return {"success": "true"}
 
     
 
-# @ui_router.get("/help/{element_id}", response_class=JSONResponse)
-# async def fetch_help(element_id: str, authenticated: bool = Depends(user_authentication)):
-#     project = AutoTrainProject(params=params, backend=hardware)
-#     job_id = project.create()
-#     monitor_url = ""
-#     if hardware == "local-ui":
-#         DB.add_job(job_id)
-#         monitor_url = "Monitor your job locally / in logs"
-#     elif hardware.startswith("ep-"):
-#         monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
-#     elif hardware.startswith("spaces-"):
-#         monitor_url = f"https://hf.co/spaces/{job_id}"
-#     else:
-#         monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+@ui_router.post("/run_training", response_class=JSONResponse)
+async def run_training(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication)
+    ):
+    project_info = process_project_creation(payload, token)
+    params = project_info["params"]
+    hardware = project_info["hardware"]
+    try:
+        project = AutoTrainProject(params=params, backend=hardware)
+        job_id = project.create()
 
-#     return {"success": "true", "monitor_url": monitor_url}
+        monitor_url = ""
+        if hardware == "local-ui":
+            DB.add_job(job_id)
+            monitor_url = "Monitor your job locally / in logs"
+        elif hardware.startswith("ep-"):
+            monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
+        elif hardware.startswith("spaces-"):
+            monitor_url = f"https://hf.co/spaces/{job_id}"
+        else:
+            monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+
+        return {"success": "true", "monitor_url": monitor_url}
+    except Exception as e:
+        return {"Exception Encountered: ", e}
 
 
 @ui_router.get("/help/{element_id}", response_class=JSONResponse)

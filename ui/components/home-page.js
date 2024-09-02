@@ -25,7 +25,8 @@ export default function HomePage() {
   const [parameterType, setParameterType] = useState("");
   const [responseData, setResponseData] = useState("");
   const [markdownContent, setMarkdownContent] = useState("");
-
+  
+  const [createProj, setCreateProj] = useState("");
 
   // TODO: Update to fetch from API
   const tasksOpts = [
@@ -166,7 +167,8 @@ export default function HomePage() {
   }, [task, parameterType]);
 
   const handleStartTraining = () => {
-    let url = SERVER_URL + `/ui/create_project`;
+    console.log("Start training...")
+    let url = SERVER_URL + `/ui/run_training`;
     let payload = {
       task: task,
       params: config,
@@ -179,6 +181,7 @@ export default function HomePage() {
       valid_split: "test", // TODO: update this
       username: "thebeginner86",
     };
+    
     axios
       .post(url, JSON.stringify(payload), {
         headers: {
@@ -186,6 +189,7 @@ export default function HomePage() {
         },
       })
       .then((resp) => {
+        setResponseData(resp.data);
         console.log(resp.data);
       })
       .catch((err) => {
@@ -222,6 +226,7 @@ export default function HomePage() {
       valid_split: "test", // TODO: update this
       username: "thebeginner86",
     };
+    
     axios
       .post(url, JSON.stringify(payload), {
         headers: {
@@ -230,8 +235,6 @@ export default function HomePage() {
       })
       .then((resp) => {
         setResponseData(resp.data);
-        console.log(resp.data);
-  
         fetchMarkdownContent();
       })
       .catch((err) => {
@@ -333,7 +336,7 @@ export default function HomePage() {
           <Box
             component="form"
             sx={{
-              "& .MuiTextField-root": { m: 1, width: "25ch" },
+              '& .MuiTextField-root': { m: 1, width: '25ch' },
             }}
             noValidate
             autoComplete="off"
@@ -350,11 +353,11 @@ export default function HomePage() {
                   <Grid
                     item
                     sx={{
-                      margin: "0.1rem",
+                      margin: '0.1rem',
                     }}
                     key={k}
                   >
-                    {type == "dropdown" ? (
+                    {type === 'dropdown' ? (
                       <TextField
                         id="outlined-select-currency"
                         select
@@ -390,40 +393,40 @@ export default function HomePage() {
             </Grid>
           </Box>
           <Box>
+            {showDetails && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={showDetails}
+                disabled={isSaved}
+              >
+                Show Details
+              </Button>
+            )}
             <Button
               variant="contained"
               color="primary"
-              onClick={showDetails}
+              onClick={handleStartTraining}
               disabled={isSaved}
+              sx={{ marginLeft: showDetails ? '1rem' : '0' }} // Adjust margin if both buttons are present
             >
-              Show Details
+              Start Training
             </Button>
             {markdownContent && (
               <Box
                 mt={2}
                 sx={{
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  border: "1px solid #ddd",
-                  padding: "1rem",
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  border: '1px solid #ddd',
+                  padding: '1rem',
                 }}
               >
                 <Typography variant="h6">Content:</Typography>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {markdownContent}
                 </ReactMarkdown>
-                <Box>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleStartTraining()}
-              disabled={isSaved}
-            >
-              Start Training
-            </Button>
-          </Box>
               </Box>
-              
             )}
           </Box>
         </>
