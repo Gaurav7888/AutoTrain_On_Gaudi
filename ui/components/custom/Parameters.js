@@ -1,6 +1,13 @@
 // ./custom/Parameters.js
 import React, { useState, useEffect } from "react";
-import { Box, TextField, Typography, Grid, MenuItem } from "@mui/material";
+import {
+  Box,
+  TextField,
+  Typography,
+  Grid,
+  MenuItem,
+  Button,
+} from "@mui/material";
 import CircularProgress from "@mui/material/CircularProgress";
 import axios from "axios";
 import { SERVER_URL } from "@/lib/constants";
@@ -62,9 +69,9 @@ export default function Parameters({ projectData, onDataChange }) {
     return newParams;
   };
 
-  const handleParameterTypeChange = (event) => {
+  const handleParameterTypeChange = (type) => {
     setLoading(true);
-    onDataChange({ parameterType: event.target.value });
+    onDataChange({ parameterType: type });
   };
 
   const handleSetConfigKey = (key, value, paramType) => {
@@ -83,18 +90,47 @@ export default function Parameters({ projectData, onDataChange }) {
 
   return (
     <Box>
-      <TextField
-        select
-        label="Choose Parameter Type"
-        value={projectData.parameterType}
-        onChange={handleParameterTypeChange}
-        fullWidth
-        margin="normal"
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
       >
-        <MenuItem value="basic">Basic</MenuItem>
-        <MenuItem value="full">Advanced</MenuItem>
-      </TextField>
-      <Typography variant="h6" my={2}>Training Parameters</Typography>
+        <Typography variant="h6" my={2}>
+          Parameter Type
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            height: "2.5rem",
+          }}
+        >
+          <Button
+            variant={
+              projectData.parameterType === "basic" ? "contained" : "outlined"
+            }
+            loading={loading}
+            onClick={() => handleParameterTypeChange("basic")}
+          >
+            Basic
+          </Button>
+          <Button
+            variant={
+              projectData.parameterType === "full" ? "contained" : "outlined"
+            }
+            loading={loading}
+            onClick={() => handleParameterTypeChange("full")}
+          >
+            Advanced
+          </Button>
+        </Box>
+      </Box>
+      <Typography variant="h6" my={2}>
+        Training Parameters
+      </Typography>
       {loading ? (
         <Typography
           sx={{
@@ -110,13 +146,13 @@ export default function Parameters({ projectData, onDataChange }) {
         </Typography>
       ) : (
         <>
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             {Object.keys(params).map((k) => {
               let type = params[k].type;
               let label = params[k].label;
               let options = params[k].options;
               return (
-                <Grid item xs={12} sm={6} key={k}>
+                <Grid item xs={12} sm={3} key={k}>
                   {type === "dropdown" ? (
                     <TextField
                       select
