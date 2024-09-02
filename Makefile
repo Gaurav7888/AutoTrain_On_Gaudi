@@ -1,7 +1,7 @@
 
 include install/Makefile.core.mk
 
-.PHONY: quality style test autotrain
+.PHONY: quality style test autotrain server ui app
 
 # Install deps
 install:
@@ -50,10 +50,10 @@ pip:
 	twine upload dist/* --verbose --repository autotrain-advanced
 
 server:
-	uvicorn src.autotrain.app.app:app --port 8080 --reload --workers 4 --host 0.0.0.0
+	uvicorn src.autotrain.app.app:app --port 8002 --reload --workers 4 --host 0.0.0.0
 
 ui:
 	cd ui && npm run dev
 
 app:
-	autotrain app --port 8000 --host 0.0.0.0
+	autotrain app --port 8002 --host 0.0.0.0

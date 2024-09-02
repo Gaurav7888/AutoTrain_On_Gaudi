@@ -3,12 +3,13 @@ import os
 import signal
 import sys
 import time
+import inspect
 from typing import List
 
 import torch
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
 #from nvitop import Device
@@ -28,6 +29,7 @@ from autotrain.dataset import (
 from autotrain.help import get_app_help
 from autotrain.app.api_routes import APICreateProjectModel
 from autotrain.project import AutoTrainProject
+from ..commands import launch_command
 
 
 logger.info("Starting AutoTrain...")
@@ -620,6 +622,18 @@ async def fetch_model_choices(
         resp.append({"id": hub_model, "name": hub_model})
     return resp
 
+@ui_router.get("/get_markdown", response_class=PlainTextResponse)
+async def fetch_script():
+    markdown_path = "/root/Ervin0307/AutoTrain_On_Gaudi/markdown.md"  # Adjust the path to your markdown file
+
+    if not os.path.isfile(markdown_path):
+        raise HTTPException(status_code=404, detail="Markdown file not found")
+
+    with open(markdown_path, "r") as file:
+        content = file.read()
+    
+    return content
+
 
 @ui_router.post("/create_project", response_class=JSONResponse)
 async def handle_form(
@@ -802,20 +816,66 @@ async def handle_form(
         valid_split=None if len(hub_dataset) == 0 else valid_split,
     )
     params = app_params.munge()
-    project = AutoTrainProject(params=params, backend=hardware)
-    job_id = project.create()
-    monitor_url = ""
-    if hardware == "local-ui":
-        DB.add_job(job_id)
-        monitor_url = "Monitor your job locally / in logs"
-    elif hardware.startswith("ep-"):
-        monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
-    elif hardware.startswith("spaces-"):
-        monitor_url = f"https://hf.co/spaces/{job_id}"
-    else:
-        monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+    
+    command = launch_command(params, ".")
+    command = ' '.join(command)
+# Replace hyphens with underscores
+    task = task.replace("-", "_")
+    # Add a bunvh of if statements because the format of the Task if different for each
+    # LLM:sft
+    #LLM:generic
 
-    return {"success": "true", "monitor_url": monitor_url}
+    #/model-choices/clm not implemented
+    print("\n\nTask: ", task)
+
+    script_path = f"/root/Ervin0307/AutoTrain_On_Gaudi/src/autotrain/trainers/{task}/__main__.py"
+    # Name of the function to extract
+    function_name = 'train'
+
+    # Load the script as a module
+    spec = None
+    if os.path.isfile(script_path):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("module.name", script_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+    # Extract the function source code
+    if spec is not None and hasattr(module, function_name):
+        function = getattr(module, function_name)
+        function_source = inspect.getsource(function)
+        
+        # Path to save the markdown file
+        markdown_path = 'markdown.md'
+        
+        # Save the function in a markdown file
+        with open(markdown_path, 'w') as md_file:
+            md_file.write(f"Command:\n`{command}`\n\n")
+            if function_source:
+                md_file.write(f"Script:\n```python\n{function_source}\n```")
+            print(f"Command and function {function_name} have been written to {markdown_path}")
+    else:
+        print(f"Could not find function {function_name} in {script_path}")
+    return {"success": "true", "command": command}
+
+    
+
+# @ui_router.get("/help/{element_id}", response_class=JSONResponse)
+# async def fetch_help(element_id: str, authenticated: bool = Depends(user_authentication)):
+#     project = AutoTrainProject(params=params, backend=hardware)
+#     job_id = project.create()
+#     monitor_url = ""
+#     if hardware == "local-ui":
+#         DB.add_job(job_id)
+#         monitor_url = "Monitor your job locally / in logs"
+#     elif hardware.startswith("ep-"):
+#         monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
+#     elif hardware.startswith("spaces-"):
+#         monitor_url = f"https://hf.co/spaces/{job_id}"
+#     else:
+#         monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+
+#     return {"success": "true", "monitor_url": monitor_url}
 
 
 @ui_router.get("/help/{element_id}", response_class=JSONResponse)
