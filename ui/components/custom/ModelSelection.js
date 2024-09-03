@@ -8,12 +8,14 @@ import {
   CardContent,
   Typography,
   Grid,
+  CircularProgress,
 } from "@mui/material";
 import axios from "axios";
 import { SERVER_URL } from "@/lib/constants";
 
 export default function ModelSelection({ projectData, onDataChange }) {
   const [modelChoice, setModelChoice] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchModelChoices = async () => {
@@ -23,6 +25,7 @@ export default function ModelSelection({ projectData, onDataChange }) {
             `${SERVER_URL}/ui/model_choices/${projectData.task}`
           );
           setModelChoice(response.data);
+          setLoading(false);
         } catch (error) {
           console.error("Error fetching model choices:", error);
         }
@@ -45,38 +48,56 @@ export default function ModelSelection({ projectData, onDataChange }) {
         padding: 2,
         border: "1px solid #ccc",
         borderRadius: "0.2rem",
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
-      <Grid container spacing={2}>
-        {modelChoice
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((option) => (
-            <Grid item xs={6} sm={4} md={3} key={option.id}>
-              <Card
-                onClick={() => handleModelChoiceChange(option.name)}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: "4rem",
-                  cursor: "pointer",
-                  border:
-                    projectData.model === option.name
-                      ? "2px solid #1976d2"
-                      : "2px solid transparent",
-                  padding: "0.7rem",
-                }}
-                elevation={3}
-              >
-                {/* <CardContent> */}
-                <Typography variant="body2" textAlign="center">
-                  {option.name}
-                </Typography>
-                {/* </CardContent> */}
-              </Card>
-            </Grid>
-          ))}
-      </Grid>
+      {loading ? (
+        <>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "1rem",  
+            }}
+          >
+            <CircularProgress />
+            <Typography>Loading Model Choices</Typography>
+          </Box>
+        </>
+      ) : (
+        <Grid container spacing={2}>
+          {modelChoice
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((option) => (
+              <Grid item xs={6} sm={4} md={3} key={option.id}>
+                <Card
+                  onClick={() => handleModelChoiceChange(option.name)}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "4rem",
+                    cursor: "pointer",
+                    border:
+                      projectData.model === option.name
+                        ? "2px solid #1976d2"
+                        : "2px solid transparent",
+                    padding: "0.7rem",
+                  }}
+                  elevation={3}
+                >
+                  {/* <CardContent> */}
+                  <Typography variant="body2" textAlign="center">
+                    {option.name}
+                  </Typography>
+                  {/* </CardContent> */}
+                </Card>
+              </Grid>
+            ))}
+        </Grid>
+      )}
     </Box>
   );
 }
