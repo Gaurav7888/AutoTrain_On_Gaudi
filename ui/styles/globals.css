@@ -1,0 +1,29 @@
+/* Apply to all scrollbars */
+*::-webkit-scrollbar {
+  width: 80px !important;
+  height: 8px !important;
+}
+
+/* Track */
+*::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+}
+
+/* Handle */
+*::-webkit-scrollbar-thumb {
+  background: #a1c0ff !important;
+  border-radius: 5px !important;
+}
+
+/* Handle on hover */
+*::-webkit-scrollbar-thumb:hover {
+  background: #4086ff !important;
+  transition: all;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #41aaff #f1f1f1;
+  transition: all;
+}
