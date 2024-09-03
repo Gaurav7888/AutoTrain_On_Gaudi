@@ -347,6 +347,7 @@ def process_input_data(config):
         else:
             train_data = load_dataset(
                 config.data_path,
+                config.data_config,
                 split=config.train_split,
                 token=config.token,
             )
@@ -375,6 +376,7 @@ def process_input_data(config):
             else:
                 valid_data = load_dataset(
                     config.data_path,
+                    config.data_config,
                     split=config.valid_split,
                     token=config.token,
                 )
@@ -442,7 +444,6 @@ def get_tokenizer(config):
 
 
 def process_data_with_chat_template(config, tokenizer, train_data, valid_data):
-    valid_data = None
     if config.chat_template in ("chatml", "zephyr", "tokenizer"):
         logger.info("Applying chat template")
         logger.info("For ORPO/DPO, `prompt` will be extracted from chosen messages")

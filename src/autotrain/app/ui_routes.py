@@ -3,14 +3,16 @@ import os
 import signal
 import sys
 import time
+import inspect
 from typing import List
 
 import torch
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from pydantic import BaseModel
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
-from nvitop import Device
+#from nvitop import Device
 
 from autotrain import __version__, logger
 from autotrain.app.db import AutoTrainDB
@@ -25,7 +27,9 @@ from autotrain.dataset import (
     AutoTrainObjectDetectionDataset,
 )
 from autotrain.help import get_app_help
+from autotrain.app.api_routes import APICreateProjectModel
 from autotrain.project import AutoTrainProject
+from ..commands import launch_command
 
 
 logger.info("Starting AutoTrain...")
@@ -35,6 +39,7 @@ ENABLE_NGC = int(os.environ.get("ENABLE_NGC", 0))
 ENABLE_NVCF = int(os.environ.get("ENABLE_NVCF", 0))
 AUTOTRAIN_LOCAL = int(os.environ.get("AUTOTRAIN_LOCAL", 1))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRAINERS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "trainers"))
 DB = AutoTrainDB("autotrain.db")
 MODEL_CHOICE = fetch_models()
 
@@ -51,7 +56,7 @@ UI_PARAMS = {
     "optimizer": {
         "type": "dropdown",
         "label": "Optimizer",
-        "options": ["adamw_torch", "adamw", "adam", "sgd"],
+        "options": ["adamw_torch", "adamw", "adam", "sgd", "adamw_torch_fused"],
     },
     "scheduler": {
         "type": "dropdown",
@@ -77,15 +82,15 @@ UI_PARAMS = {
         "options": [True, False],
     },
     "warmup_ratio": {
-        "type": "number",
+        "type": "float",
         "label": "Warmup proportion",
     },
     "max_grad_norm": {
-        "type": "number",
+        "type": "float",
         "label": "Max grad norm",
     },
     "weight_decay": {
-        "type": "number",
+        "type": "float",
         "label": "Weight decay",
     },
     "epochs": {
@@ -279,6 +284,174 @@ UI_PARAMS = {
         "label": "Unsloth",
         "options": [True, False],
     },
+    "model_name_or_path": {
+        "type": "dropdown",
+        "label": "Model name or path",
+        "options": [],
+    },
+    "backend": {
+        "type": "string",
+        "label": "Backend",
+    },
+    "dataset_name": {
+        "type": "string",
+        "label": "Dataset name",
+    },
+    "train_split": {
+        "type": "string",
+        "label": "Train split",
+    },
+    "valid_split": {
+        "type": "string",
+        "label": "Validation split",
+    },
+    "column_mapping_text_column": {
+        "type": "string",
+        "label": "Column mapping text column",
+    },
+    "column_mapping_target_column": {
+        "type": "string",
+        "label": "Column mapping target column",
+    },
+    "max_seq_length": {
+        "type": "number",
+        "label": "Max sequence length",
+    },
+    "num_train_epochs": {
+        "type": "number",
+        "label": "Number of training epochs",
+    },
+    "per_device_train_batch_size": {
+        "type": "number",
+        "label": "Per device training batch size",
+    },
+    "learning_rate": {
+        "type": "float",
+        "label": "Learning rate",
+    },
+    "optim": {
+        "type": "string",
+        "label": "Optimizer",
+    },
+    "lr_scheduler_type": {
+        "type": "string",
+        "label": "Learning rate scheduler type",
+    },
+    "gradient_accumulation_steps": {
+        "type": "number",
+        "label": "Gradient accumulation steps",
+    },
+    "mixed_precision": {
+        "type": "string",
+        "label": "Mixed precision",
+    },
+    "use_habana": {
+        "type": "dropdown",
+        "label": "Use Habana device",
+        "options": [True, False],
+    },
+    "use_hpu_graphs": {
+        "type": "dropdown",
+        "label": "Use HPU Graphs",
+        "options": [True, False],
+    },
+     "use_hpu_graphs_for_training": {
+        "type": "dropdown",
+        "label": "Use HPU Graphs for Training",
+        "options": [True, False],
+    },
+    "use_hpu_graphs_for_inference": {
+        "type": "dropdown",
+        "label": "Use HPU Graphs for Inference",
+        "options": [True, False],
+    },
+    "non_blocking_data_copy": {
+        "type": "dropdown",
+        "label": "Non-blocking Data Copy",
+        "options": [True, False],
+    },
+    "evaluation_strategy": {
+        "type": "string",
+        "label": "Evalutaion strategy",
+    },
+    "feature_extractor_name": {
+        "type": "string",
+        "label": "Feature extractor name",
+    },
+    "freeze_feature_encoder": {
+        "type": "dropdown",
+        "label": "Freeze feature encoder",
+        "options": [True, False],
+    },
+    "dataset_config_name": {
+        "type": "string",
+        "label": "Dataset config name",
+    },
+    "do_train": {
+        "type": "dropdown",
+        "label": "Do train",
+        "options": [True, False],
+    },
+    "eval_split_name": {
+        "type": "string",
+        "label": "Eval split name",
+    },
+    "gaudi_config_name": {
+        "type": "string",
+        "label": "Gaudi config name",
+    },
+    "audio_column_name": {
+        "type": "string",
+        "label": "Audio column name",
+    },
+    "label_column_name": {
+        "type": "string",
+        "label": "Label column name",
+    },
+    "max_length_seconds": {
+        "type": "number",
+        "label": "Max length seconds",
+    },
+    "num_train_epochs": {
+        "type": "number",
+        "label": "Number of training epochs",
+    },
+    "seed": {
+        "type": "number",
+        "label": "Seed",
+    },
+    "attention_mask": {
+        "type": "dropdown",
+        "label": "Attention mask",
+        "options": [True, False],
+    },
+    "per_device_train_batch_size": {
+        "type": "number",
+        "label": "Per device training batch size",
+    },
+    "throughput_warmup_steps": {
+        "type": "number",
+        "label": "Throughput warmup steps",
+    },
+    "dataloader_num_workers": {
+        "type": "number",
+        "label": "Dataloader num workers",
+    },
+    "use_lazy_mode": {
+        "type": "dropdown",
+        "label": "Use lazy mode",
+        "options": [True, False],
+    },
+    "overwrite_output_dir": {
+        "type": "dropdown",
+        "label": "Overwrite output directory",
+        "options": [True, False],
+    },
+    "remove_unused_columns": {
+        "type": "dropdown",
+        "label": "Remove unused columns",
+        "options": [True, False],
+    },
 }
 
 
@@ -384,6 +557,9 @@ async def fetch_params(task: str, param_type: str, authenticated: bool = Depends
             ui_params[param]["default"] = task_params[param]
         else:
             logger.info(f"Param {param} not found in UI_PARAMS")
+    # update options for mode_name_or_path
+    if "model_name_or_path" in ui_params:
+        ui_params["model_name_or_path"]["options"] = MODEL_CHOICE[task]
 
     ui_params = dict(sorted(ui_params.items(), key=lambda x: (x[1]["type"], x[1]["label"])))
     return ui_params
@@ -448,46 +624,23 @@ async def fetch_model_choices(
     return resp
 
 
-@ui_router.post("/create_project", response_class=JSONResponse)
-async def handle_form(
-    project_name: str = Form(...),
-    task: str = Form(...),
-    base_model: str = Form(...),
-    hardware: str = Form(...),
-    params: str = Form(...),
-    autotrain_user: str = Form(...),
-    column_mapping: str = Form('{"default": "value"}'),
-    data_files_training: List[UploadFile] = File(None),
-    data_files_valid: List[UploadFile] = File(None),
-    hub_dataset: str = Form(""),
-    train_split: str = Form(""),
-    valid_split: str = Form(""),
-    token: str = Depends(user_authentication),
-):
+def process_project_creation(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication)):
     """
-    This function is used to create a new project
-    :param project_name: str
-    :param task: str
-    :param base_model: str
-    :param hardware: str
-    :param params: str
-    :param autotrain_user: str
-    :param column_mapping: str
-    :param data_files_training: List[UploadFile]
-    :param data_files_valid: List[UploadFile]
-    :param hub_dataset: str
-    :param train_split: str
-    :param valid_split: str
-    :return: JSONResponse
+    Process the project creation logic and return the necessary information.
     """
+    train_split = payload.train_split
     train_split = train_split.strip()
     if len(train_split) == 0:
         train_split = None
 
+    valid_split = payload.valid_split
     valid_split = valid_split.strip()
     if len(valid_split) == 0:
         valid_split = None
 
+    hardware = payload.hardware
     logger.info(f"hardware: {hardware}")
     if hardware == "local-ui":
         running_jobs = get_running_jobs(DB)
@@ -496,22 +649,30 @@ async def handle_form(
                 status_code=409, detail="Another job is already running. Please wait for it to finish."
             )
 
+    project_name = payload.project_name
+    autotrain_user = payload.username
     if repo_exists(f"{autotrain_user}/{project_name}", token=token):
         raise HTTPException(
             status_code=409,
             detail=f"Project {project_name} already exists. Please choose a different name.",
         )
 
-    params = json.loads(params)
+    params = payload.params
+    # params = json.loads(params)
     # convert "null" to None
-    for key in params:
-        if params[key] == "null":
-            params[key] = None
-    column_mapping = json.loads(column_mapping)
+    # for key in params:
+    #     if params[key] == "null":
+    #         params[key] = None
+    
+    column_mapping = payload.column_mapping
+    column_mapping = column_mapping.model_dump()
 
+    data_files_training = payload.data_files_training
+    data_files_valid = payload.data_files_valid
     training_files = [f.file for f in data_files_training if f.filename != ""] if data_files_training else []
     validation_files = [f.file for f in data_files_valid if f.filename != ""] if data_files_valid else []
 
+    hub_dataset = payload.hub_dataset
     if len(training_files) > 0 and len(hub_dataset) > 0:
         raise HTTPException(
             status_code=400, detail="Please either upload a dataset or choose a dataset from the Hugging Face Hub."
@@ -522,6 +683,8 @@ async def handle_form(
             status_code=400, detail="Please upload a dataset or choose a dataset from the Hugging Face Hub."
         )
 
+    base_model = payload.base_model
+    task = payload.task
     if len(hub_dataset) > 0 and task == "dreambooth":
         raise HTTPException(status_code=400, detail="Dreambooth does not support Hugging Face Hub datasets.")
 
@@ -625,7 +788,7 @@ async def handle_form(
     else:
         data_path = hub_dataset
     app_params = AppParams(
-        job_params_json=json.dumps(params),
+        job_params_json=params.model_dump(),
         token=token,
         project_name=project_name,
         username=autotrain_user,
@@ -638,20 +801,104 @@ async def handle_form(
         valid_split=None if len(hub_dataset) == 0 else valid_split,
     )
     params = app_params.munge()
-    project = AutoTrainProject(params=params, backend=hardware)
-    job_id = project.create()
-    monitor_url = ""
-    if hardware == "local-ui":
-        DB.add_job(job_id)
-        monitor_url = "Monitor your job locally / in logs"
-    elif hardware.startswith("ep-"):
-        monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
-    elif hardware.startswith("spaces-"):
-        monitor_url = f"https://hf.co/spaces/{job_id}"
-    else:
-        monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+    
+    return {
+        "params": params,
+        "hardware": hardware,
+        "project_name": project_name,
+        "autotrain_user": autotrain_user,
+        "task": task,
+        "data_path": data_path,
+    }
 
-    return {"success": "true", "monitor_url": monitor_url}
+
+@ui_router.get("/get_markdown", response_class=PlainTextResponse)
+async def fetch_script():
+    markdown_path = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "markdown.md"))
+    print("\n\nMarkdown Path: ", markdown_path)
+    if not os.path.isfile(markdown_path):
+        raise HTTPException(status_code=404, detail="Markdown file not found")
+
+    with open(markdown_path, "r") as file:
+        content = file.read()
+    
+    return content
+
+
+@ui_router.post("/create_project", response_class=JSONResponse)
+async def handle_form(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication),
+):
+    """
+    This function is used to create a new project
+    :body: APICreateProjectModel
+    :return: JSONResponse
+    """
+    project_info = process_project_creation(payload, token)
+    params = project_info["params"]
+
+    command = launch_command(params, ".")
+    command = ' '.join(command)
+
+    task = project_info["task"].replace("-", "_")
+
+    script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
+    extract_function_name = 'train'
+
+    # Load the script as a module
+    spec = None
+    if os.path.isfile(script_path):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("module.name", script_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+    # Extract the function source code
+    if spec is not None and hasattr(module, extract_function_name):
+        function = getattr(module, extract_function_name)
+        function_source = inspect.getsource(function)
+
+        markdown_path = 'markdown.md'
+        
+        # Save the function in a markdown file
+        with open(markdown_path, 'w') as md_file:
+            md_file.write(f"### Command:\n`{command}`\n\n")
+            if function_source:
+                md_file.write(f"### Script:\n```python\n{function_source}\n```")
+            logger.info(f"Command and function {extract_function_name} have been written to {markdown_path}")
+    else:
+        logger.error(f"Could not find function {extract_function_name} in {script_path}")
+    return {"success": "true"}
+
+    
+
+@ui_router.post("/run_training", response_class=JSONResponse)
+async def run_training(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication)
+    ):
+    project_info = process_project_creation(payload, token)
+    params = project_info["params"]
+    hardware = project_info["hardware"]
+    try:
+        project = AutoTrainProject(params=params, backend=hardware)
+        job_id = project.create()
+
+        monitor_url = ""
+        if hardware == "local-ui":
+            DB.add_job(job_id)
+            monitor_url = "Monitor your job locally / in logs"
+        elif hardware.startswith("ep-"):
+            monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
+        elif hardware.startswith("spaces-"):
+            monitor_url = f"https://hf.co/spaces/{job_id}"
+        else:
+            monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+
+        return {"success": "true", "monitor_url": monitor_url}
+    except Exception as e:
+        return {"Exception Encountered: ", e}
 
 
 @ui_router.get("/help/{element_id}", response_class=JSONResponse)

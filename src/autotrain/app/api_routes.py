@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, get_type_hints
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File
 from fastapi.responses import JSONResponse
 from huggingface_hub import HfApi
 from pydantic import BaseModel, create_model, model_validator
@@ -17,7 +17,7 @@ from autotrain.trainers.image_regression.params import ImageRegressionParams
 from autotrain.trainers.sent_transformers.params import SentenceTransformersParams
 from autotrain.trainers.seq2seq.params import Seq2SeqParams
 from autotrain.trainers.tabular.params import TabularParams
-from autotrain.trainers.text_classification.params import TextClassificationParams
+from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
 
@@ -83,7 +83,7 @@ ImageClassificationParamsAPI = create_api_base_model(ImageClassificationParams, 
 Seq2SeqParamsAPI = create_api_base_model(Seq2SeqParams, "Seq2SeqParamsAPI")
 TabularClassificationParamsAPI = create_api_base_model(TabularParams, "TabularClassificationParamsAPI")
 TabularRegressionParamsAPI = create_api_base_model(TabularParams, "TabularRegressionParamsAPI")
-TextClassificationParamsAPI = create_api_base_model(TextClassificationParams, "TextClassificationParamsAPI")
+TextClassificationParamsAPI = create_api_base_model(TextClassificationGaudiParams, "TextClassificationParamsAPI")
 TextRegressionParamsAPI = create_api_base_model(TextRegressionParams, "TextRegressionParamsAPI")
 TokenClassificationParamsAPI = create_api_base_model(TokenClassificationParams, "TokenClassificationParamsAPI")
 SentenceTransformersParamsAPI = create_api_base_model(SentenceTransformersParams, "SentenceTransformersParamsAPI")
@@ -209,6 +209,7 @@ class APICreateProjectModel(BaseModel):
         "tabular-classification",
         "tabular-regression",
         "image-regression",
+        "audio-classification"
     ]
     base_model: str
     hardware: Literal[
@@ -223,7 +224,7 @@ class APICreateProjectModel(BaseModel):
         "spaces-l4x4",
         "spaces-a10g-largex2",
         "spaces-a10g-largex4",
-        # "local",
+        "local-ui",
     ]
     params: Union[
         LLMSFTTrainingParamsAPI,
@@ -269,6 +270,8 @@ class APICreateProjectModel(BaseModel):
     hub_dataset: str
     train_split: str
     valid_split: Optional[str] = None
+    data_files_training: List[UploadFile] = File(None)
+    data_files_valid: List[UploadFile] = File(None)
 
     @model_validator(mode="before")
     @classmethod

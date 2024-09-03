@@ -29,7 +29,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -143,6 +142,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+
+# Next
+.next
+node_modules
 # run logs
 src/autotrain/trainers/*/runs/
 src/autotrain/trainers/*/checkpoint-*/

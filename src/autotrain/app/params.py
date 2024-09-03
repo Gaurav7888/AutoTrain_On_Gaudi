@@ -10,9 +10,10 @@ from autotrain.trainers.object_detection.params import ObjectDetectionParams
 from autotrain.trainers.sent_transformers.params import SentenceTransformersParams
 from autotrain.trainers.seq2seq.params import Seq2SeqParams
 from autotrain.trainers.tabular.params import TabularParams
-from autotrain.trainers.text_classification.params import TextClassificationParams
+from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
+from autotrain.trainers.audio_classification.params import AudioClassificationGaudiParams
 
 
 HIDDEN_PARAMS = [
@@ -78,8 +79,7 @@ PARAMS["llm"] = LLMTrainingParams(
     chat_template="none",
     max_completion_length=128,
 ).model_dump()
-
-PARAMS["text-classification"] = TextClassificationParams(
+PARAMS["text-classification"] = TextClassificationGaudiParams(
     mixed_precision="fp16",
     log="tensorboard",
 ).model_dump()
@@ -131,6 +131,10 @@ PARAMS["image-regression"] = ImageRegressionParams(
     mixed_precision="fp16",
     log="tensorboard",
 ).model_dump()
+PARAMS["audio-classification"] = AudioClassificationGaudiParams(
+    mixed_precision="fp16",
+    log="tensorboard",
+).model_dump()
 
 
 @dataclass
@@ -175,11 +179,13 @@ class AppParams:
             return self._munge_params_sent_transformers()
         elif self.task == "image-regression":
             return self._munge_params_img_reg()
+        elif self.task == "audio-classification":
+            return self._munge_params_audio_clf()
         else:
             raise ValueError(f"Unknown task: {self.task}")
 
     def _munge_common_params(self):
-        _params = json.loads(self.job_params_json)
+        _params = self.job_params_json
         _params["token"] = self.token
         _params["project_name"] = f"{self.project_name}"
         if "push_to_hub" not in _params:
@@ -257,7 +263,13 @@ class AppParams:
             _params["target_column"] = self.column_mapping.get("label" if not self.api else "target_column", "label")
             _params["train_split"] = self.train_split
             _params["valid_split"] = self.valid_split
-        return TextClassificationParams(**_params)
+        return TextClassificationGaudiParams(**_params)
+
+    def _munge_params_audio_clf(self):
+        _params = self._munge_common_params()
+        _params["model"] = self.base_model
+        _params["log"] = "tensorboard"
+        return AudioClassificationGaudiParams(**_params)
 
     def _munge_params_text_reg(self):
         _params = self._munge_common_params()

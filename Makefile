@@ -1,7 +1,18 @@
-.PHONY: quality style test
+
+include install/Makefile.core.mk
+
+.PHONY: quality style test autotrain server ui app
+
+# Install deps
+install:
+	pip install -e .
+
+# Run AutoTrain
+autotrain:
+	export HF_TOKEN=${HF_TOKEN};
+	autotrain app --port ${PORT} --host ${HOST}
 
 # Check that source code meets quality standards
-
 quality:
 	black --check --line-length 119 --target-version py38 .
 	isort --check-only .
@@ -37,3 +48,12 @@ pip:
 	make style && make quality
 	python setup.py sdist bdist_wheel
 	twine upload dist/* --verbose --repository autotrain-advanced
+
+server:
+	uvicorn src.autotrain.app.app:app --port 8000 --reload --workers 4 --host 0.0.0.0
+
+ui:
+	cd ui && npm run dev
+
+app:
+	autotrain app --port 8002 --host 0.0.0.0

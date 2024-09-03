@@ -3,26 +3,37 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from autotrain import __version__, logger
 from autotrain.app.api_routes import api_router
 from autotrain.app.oauth import attach_oauth
 from autotrain.app.ui_routes import ui_router
-
+from fastapi.middleware.cors import CORSMiddleware
 
 logger.info("Starting AutoTrain...")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 if "SPACE_ID" in os.environ:
     attach_oauth(app)
 
-app.include_router(ui_router, prefix="/ui", include_in_schema=False)
+app.include_router(ui_router, prefix="/ui")
 app.include_router(api_router, prefix="/api")
 static_path = os.path.join(BASE_DIR, "static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 logger.info(f"AutoTrain version: {__version__}")
 logger.info("AutoTrain started successfully")
-
 
 @app.get("/")
 async def forward_to_ui(request: Request):

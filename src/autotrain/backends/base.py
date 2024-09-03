@@ -11,9 +11,10 @@ from autotrain.trainers.object_detection.params import ObjectDetectionParams
 from autotrain.trainers.sent_transformers.params import SentenceTransformersParams
 from autotrain.trainers.seq2seq.params import Seq2SeqParams
 from autotrain.trainers.tabular.params import TabularParams
-from autotrain.trainers.text_classification.params import TextClassificationParams
+from autotrain.trainers.text_classification.params import TextClassificationParams, TextClassificationGaudiParams
 from autotrain.trainers.text_regression.params import TextRegressionParams
 from autotrain.trainers.token_classification.params import TokenClassificationParams
+from autotrain.trainers.audio_classification.params import AudioClassificationGaudiParams
 
 
 AVAILABLE_HARDWARE = {
@@ -58,7 +59,7 @@ AVAILABLE_HARDWARE = {
 @dataclass
 class BaseBackend:
     params: Union[
-        TextClassificationParams,
+        TextClassificationGaudiParams,
         ImageClassificationParams,
         LLMTrainingParams,
         GenericParams,
@@ -70,6 +71,7 @@ class BaseBackend:
         ObjectDetectionParams,
         SentenceTransformersParams,
         ImageRegressionParams,
+        AudioClassificationGaudiParams
     ]
     backend: str
 
@@ -92,7 +94,7 @@ class BaseBackend:
 
         if isinstance(self.params, LLMTrainingParams):
             self.task_id = 9
-        elif isinstance(self.params, TextClassificationParams):
+        elif isinstance(self.params, TextClassificationGaudiParams):
             self.task_id = 2
         elif isinstance(self.params, TabularParams):
             self.task_id = 26
@@ -114,6 +116,8 @@ class BaseBackend:
             self.task_id = 30
         elif isinstance(self.params, ImageRegressionParams):
             self.task_id = 24
+        elif isinstance(self.params, AudioClassificationGaudiParams):
+            self.task_id = 31
         else:
             raise NotImplementedError
 
@@ -135,7 +139,7 @@ class BaseBackend:
         if isinstance(self.params, DreamBoothTrainingParams):
             self.env_vars["DATA_PATH"] = self.params.image_path
         else:
-            self.env_vars["DATA_PATH"] = self.params.data_path
+            self.env_vars["DATA_PATH"] = self.params.dataset_name
 
         if not isinstance(self.params, GenericParams):
-            self.env_vars["MODEL"] = self.params.model
+            self.env_vars["MODEL"] = self.params.model_name_or_path
