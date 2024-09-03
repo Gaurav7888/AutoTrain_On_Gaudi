@@ -9,8 +9,8 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { SERVER_URL } from "@/lib/constants";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+
+import ShowDetails from "./show-details";
 
 export default function HomePage() {
   const [task, setTask] = useState("");
@@ -24,10 +24,7 @@ export default function HomePage() {
   const [isSaved, setIsSaved] = useState(false);
   const [parameterType, setParameterType] = useState("");
   const [responseData, setResponseData] = useState("");
-  const [markdownContent, setMarkdownContent] = useState("");
   
-  const [createProj, setCreateProj] = useState("");
-
   // TODO: Update to fetch from API
   const tasksOpts = [
     { value: "llm:sft", label: "LLM: Supervised Finetuning" },
@@ -197,51 +194,6 @@ export default function HomePage() {
       });
   };
 
-  const fetchMarkdownContent = async () => {
-    try {
-      let url = SERVER_URL + `/ui/get_markdown`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const text = await response.text();
-      setMarkdownContent(text);
-    } catch (error) {
-      console.error("Error fetching markdown file:", error);
-    }
-  };
-
-  const showDetails = () => {
-    console.log("Details are being shown")
-    let url = SERVER_URL + `/ui/create_project`;
-    let payload = {
-      task: task,
-      params: config,
-      project_name: projectName,
-      hardware: "local-ui", // TODO: update this, if want to support hf spaces infra
-      base_model: config.model_name_or_path,
-      column_mapping: { text_column: "text", target_column: "target" },
-      hub_dataset: config.dataset_name, // TODO: update this
-      train_split: "train", // TODO: update this
-      valid_split: "test", // TODO: update this
-      username: "thebeginner86",
-    };
-    
-    axios
-      .post(url, JSON.stringify(payload), {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-      .then((resp) => {
-        setResponseData(resp.data);
-        fetchMarkdownContent();
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  };
-
   return (
     <>
       <Box
@@ -393,41 +345,23 @@ export default function HomePage() {
             </Grid>
           </Box>
           <Box>
-            {showDetails && (
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={showDetails}
-                disabled={isSaved}
-              >
-                Show Details
-              </Button>
-            )}
+            <ShowDetails
+              task={task}
+              config={config}
+              projectName={projectName}
+              datasetName={datasetName}
+              isSaved={isSaved}
+              SERVER_URL={SERVER_URL}
+            />
             <Button
               variant="contained"
               color="primary"
               onClick={handleStartTraining}
               disabled={isSaved}
-              sx={{ marginLeft: showDetails ? '1rem' : '0' }} // Adjust margin if both buttons are present
+              sx={{ margin: '1rem 0' }} 
             >
               Start Training
             </Button>
-            {markdownContent && (
-              <Box
-                mt={2}
-                sx={{
-                  maxHeight: '300px',
-                  overflowY: 'auto',
-                  border: '1px solid #ddd',
-                  padding: '1rem',
-                }}
-              >
-                <Typography variant="h6">Content:</Typography>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {markdownContent}
-                </ReactMarkdown>
-              </Box>
-            )}
           </Box>
         </>
       )}

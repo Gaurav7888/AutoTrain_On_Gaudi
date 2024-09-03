@@ -814,8 +814,8 @@ def process_project_creation(
 
 @ui_router.get("/get_markdown", response_class=PlainTextResponse)
 async def fetch_script():
-    markdown_path = "/root/Ervin0307/AutoTrain_On_Gaudi/markdown.md"
-
+    markdown_path = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "markdown.md"))
+    print("\n\nMarkdown Path: ", markdown_path)
     if not os.path.isfile(markdown_path):
         raise HTTPException(status_code=404, detail="Markdown file not found")
 
@@ -858,15 +858,14 @@ async def handle_form(
     if spec is not None and hasattr(module, extract_function_name):
         function = getattr(module, extract_function_name)
         function_source = inspect.getsource(function)
-        
-        # Path to save the markdown file
+
         markdown_path = 'markdown.md'
         
         # Save the function in a markdown file
         with open(markdown_path, 'w') as md_file:
-            md_file.write(f"Command:\n`{command}`\n\n")
+            md_file.write(f"### Command:\n`{command}`\n\n")
             if function_source:
-                md_file.write(f"Script:\n```python\n{function_source}\n```")
+                md_file.write(f"### Script:\n```python\n{function_source}\n```")
             logger.info(f"Command and function {extract_function_name} have been written to {markdown_path}")
     else:
         logger.error(f"Could not find function {extract_function_name} in {script_path}")
