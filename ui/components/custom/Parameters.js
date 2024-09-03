@@ -1,4 +1,3 @@
-// ./custom/Parameters.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -128,9 +127,6 @@ export default function Parameters({ projectData, onDataChange }) {
           </Button>
         </Box>
       </Box>
-      <Typography variant="h6" my={2}>
-        Training Parameters
-      </Typography>
       {loading ? (
         <Typography
           sx={{
@@ -144,41 +140,55 @@ export default function Parameters({ projectData, onDataChange }) {
           <CircularProgress />
           Loading Parameters
         </Typography>
+      ) : projectData.parameterType === "" ? (
+        <></>
       ) : (
         <>
-          <Grid container spacing={3}>
-            {Object.keys(params).map((k) => {
-              let type = params[k].type;
-              let label = params[k].label;
-              let options = params[k].options;
-              return (
-                <Grid item xs={12} sm={3} key={k}>
-                  {type === "dropdown" ? (
-                    <TextField
-                      select
-                      label={`Choose ${label}`}
-                      value={projectData.config[k]?.toString() || ""}
-                      onChange={(e) => handleSetConfigKey(k, e.target.value)}
-                      fullWidth
-                    >
-                      {options.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    <TextField
-                      label={label}
-                      value={projectData.config[k]?.toString() || ""}
-                      onChange={(e) => handleSetConfigKey(k, e.target.value)}
-                      fullWidth
-                    />
-                  )}
-                </Grid>
-              );
-            })}
-          </Grid>
+          <Typography variant="h6" my={1}>
+            Training Parameters
+          </Typography>
+          <Box
+            sx={{
+              height: "50vh",
+              padding: "1rem",
+              overflowY: "auto",
+              // backgroundColor: "yellow",
+            }}
+          >
+            <Grid container spacing={3}>
+              {Object.keys(params).map((k) => {
+                let type = params[k].type;
+                let label = params[k].label;
+                let options = params[k].options;
+                return (
+                  <Grid item xs={12} sm={3} key={k}>
+                    {type === "dropdown" ? (
+                      <TextField
+                        select
+                        label={`Choose ${label}`}
+                        value={projectData.config[k]?.toString() || ""}
+                        onChange={(e) => handleSetConfigKey(k, e.target.value)}
+                        fullWidth
+                      >
+                        {options.map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    ) : (
+                      <TextField
+                        label={label}
+                        value={projectData.config[k]?.toString() || ""}
+                        onChange={(e) => handleSetConfigKey(k, e.target.value)}
+                        fullWidth
+                      />
+                    )}
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
         </>
       )}
     </Box>
