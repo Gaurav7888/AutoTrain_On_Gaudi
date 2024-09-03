@@ -206,7 +206,7 @@ def launch_command(params, dir):
         else:
             cmd.extend(
                 [
-                    "-m"
+                    "-m",
                     "autotrain.trainers.text_classification",
                     "--training_config",
                     os.path.join(project_name, "training_params.json"),

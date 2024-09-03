@@ -3,12 +3,13 @@ import os
 import signal
 import sys
 import time
+import inspect
 from typing import List
 
 import torch
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
 #from nvitop import Device
@@ -28,6 +29,7 @@ from autotrain.dataset import (
 from autotrain.help import get_app_help
 from autotrain.app.api_routes import APICreateProjectModel
 from autotrain.project import AutoTrainProject
+from ..commands import launch_command
 
 
 logger.info("Starting AutoTrain...")
@@ -37,6 +39,7 @@ ENABLE_NGC = int(os.environ.get("ENABLE_NGC", 0))
 ENABLE_NVCF = int(os.environ.get("ENABLE_NVCF", 0))
 AUTOTRAIN_LOCAL = int(os.environ.get("AUTOTRAIN_LOCAL", 1))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRAINERS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "trainers"))
 DB = AutoTrainDB("autotrain.db")
 MODEL_CHOICE = fetch_models()
 
@@ -621,15 +624,11 @@ async def fetch_model_choices(
     return resp
 
 
-@ui_router.post("/create_project", response_class=JSONResponse)
-async def handle_form(
+def process_project_creation(
     payload: APICreateProjectModel,
-    token: str = Depends(user_authentication),
-):
+    token: str = Depends(user_authentication)):
     """
-    This function is used to create a new project
-    :body: APICreateProjectModel
-    :return: JSONResponse
+    Process the project creation logic and return the necessary information.
     """
     train_split = payload.train_split
     train_split = train_split.strip()
@@ -802,20 +801,104 @@ async def handle_form(
         valid_split=None if len(hub_dataset) == 0 else valid_split,
     )
     params = app_params.munge()
-    project = AutoTrainProject(params=params, backend=hardware)
-    job_id = project.create()
-    monitor_url = ""
-    if hardware == "local-ui":
-        DB.add_job(job_id)
-        monitor_url = "Monitor your job locally / in logs"
-    elif hardware.startswith("ep-"):
-        monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
-    elif hardware.startswith("spaces-"):
-        monitor_url = f"https://hf.co/spaces/{job_id}"
-    else:
-        monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+    
+    return {
+        "params": params,
+        "hardware": hardware,
+        "project_name": project_name,
+        "autotrain_user": autotrain_user,
+        "task": task,
+        "data_path": data_path,
+    }
 
-    return {"success": "true", "monitor_url": monitor_url}
+
+@ui_router.get("/get_markdown", response_class=PlainTextResponse)
+async def fetch_script():
+    markdown_path = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "markdown.md"))
+    print("\n\nMarkdown Path: ", markdown_path)
+    if not os.path.isfile(markdown_path):
+        raise HTTPException(status_code=404, detail="Markdown file not found")
+
+    with open(markdown_path, "r") as file:
+        content = file.read()
+    
+    return content
+
+
+@ui_router.post("/create_project", response_class=JSONResponse)
+async def handle_form(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication),
+):
+    """
+    This function is used to create a new project
+    :body: APICreateProjectModel
+    :return: JSONResponse
+    """
+    project_info = process_project_creation(payload, token)
+    params = project_info["params"]
+
+    command = launch_command(params, ".")
+    command = ' '.join(command)
+
+    task = project_info["task"].replace("-", "_")
+
+    script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
+    extract_function_name = 'train'
+
+    # Load the script as a module
+    spec = None
+    if os.path.isfile(script_path):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("module.name", script_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+    # Extract the function source code
+    if spec is not None and hasattr(module, extract_function_name):
+        function = getattr(module, extract_function_name)
+        function_source = inspect.getsource(function)
+
+        markdown_path = 'markdown.md'
+        
+        # Save the function in a markdown file
+        with open(markdown_path, 'w') as md_file:
+            md_file.write(f"### Command:\n`{command}`\n\n")
+            if function_source:
+                md_file.write(f"### Script:\n```python\n{function_source}\n```")
+            logger.info(f"Command and function {extract_function_name} have been written to {markdown_path}")
+    else:
+        logger.error(f"Could not find function {extract_function_name} in {script_path}")
+    return {"success": "true"}
+
+    
+
+@ui_router.post("/run_training", response_class=JSONResponse)
+async def run_training(
+    payload: APICreateProjectModel,
+    token: str = Depends(user_authentication)
+    ):
+    project_info = process_project_creation(payload, token)
+    params = project_info["params"]
+    hardware = project_info["hardware"]
+    try:
+        project = AutoTrainProject(params=params, backend=hardware)
+        job_id = project.create()
+
+        monitor_url = ""
+        if hardware == "local-ui":
+            DB.add_job(job_id)
+            monitor_url = "Monitor your job locally / in logs"
+        elif hardware.startswith("ep-"):
+            monitor_url = f"https://ui.endpoints.huggingface.co/{autotrain_user}/endpoints/{job_id}"
+        elif hardware.startswith("spaces-"):
+            monitor_url = f"https://hf.co/spaces/{job_id}"
+        else:
+            monitor_url = f"Success! Monitor your job in logs. Job ID: {job_id}"
+
+        return {"success": "true", "monitor_url": monitor_url}
+    except Exception as e:
+        return {"Exception Encountered: ", e}
 
 
 @ui_router.get("/help/{element_id}", response_class=JSONResponse)

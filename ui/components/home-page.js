@@ -11,7 +11,7 @@ import {
 import ProjectDetails from "./custom/ProjectDetails";
 import ModelSelection from "./custom/ModelSelection";
 import Parameters from "./custom/Parameters";
-import Script from "./custom/Script";
+import ShowDetails from "./show-details";
 import { handleStartTraining } from "@/actions/startTraining";
 
 const steps = ["Project Details", "Model Selection", "Parameters", "Script"];
@@ -26,6 +26,8 @@ export default function HomePage() {
     parameterType: "",
     config: {},
   });
+  const [responseData, setResponseData] = useState("");
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleProjectDataChange = (newData) => {
     setProjectData((prevData) => ({ ...prevData, ...newData }));
@@ -55,7 +57,15 @@ export default function HomePage() {
           />
         );
       case 3:
-        return <Script projectData={projectData} />;
+        return (
+          <ShowDetails
+            task={projectData.task}
+            config={projectData.config}
+            projectName={projectData.projectName}
+            datasetName={projectData.datasetName}
+            isSaved={isSaved}
+          />
+        );
       default:
         return "Unknown step";
     }
@@ -118,9 +128,10 @@ export default function HomePage() {
             <Box sx={{ flex: "1 1 auto" }} />
             <Button
               onClick={
-                activeStep === steps.length - 1
-                  ? handleStartTraining(projectData)
-                  : handleNext
+                // activeStep === steps.length - 1
+                // ? handleStartTraining(projectData, setResponseData)
+                // :
+                handleNext
               }
             >
               {activeStep === steps.length - 1 ? "Finish" : "Next"}
