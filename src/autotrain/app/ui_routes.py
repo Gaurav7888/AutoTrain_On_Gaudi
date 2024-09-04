@@ -839,13 +839,16 @@ async def handle_form(
     """
     project_info = process_project_creation(payload, token)
     params = project_info["params"]
+    task = project_info["task"].replace("-", "_")
 
     command = launch_command(params, ".")
     command = ' '.join(command)
 
-    task = project_info["task"].replace("-", "_")
-
-    script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
+    if (task == "llm:sft"):
+        script_path = os.path.join(TRAINERS_DIR, "clm/sft", "train_clm_sft.py")
+    else:
+        script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
+    print("\n\n\n\n\nSCRIPT PATH: ", script_path)
     extract_function_name = 'train'
 
     # Load the script as a module
@@ -874,7 +877,6 @@ async def handle_form(
     return {"success": "true"}
 
     
-
 @ui_router.post("/run_training", response_class=JSONResponse)
 async def run_training(
     payload: APICreateProjectModel,
