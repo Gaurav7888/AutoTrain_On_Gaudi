@@ -12,9 +12,10 @@ import ProjectDetails from "./custom/ProjectDetails";
 import ModelSelection from "./custom/ModelSelection";
 import Parameters from "./custom/Parameters";
 import ShowDetails from "./show-details";
+import Logs from "./custom/Logs"; // Import the Logs component
 import { handleStartTraining } from "@/actions/startTraining";
 
-const steps = ["Project Details", "Model Selection", "Parameters", "Script"];
+const steps = ["Project Details", "Model Selection", "Parameters", "Script", "Logs and Metrics", "Outcome"];
 
 export default function HomePage() {
   const [activeStep, setActiveStep] = useState(0);
@@ -28,6 +29,7 @@ export default function HomePage() {
   });
   const [responseData, setResponseData] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [showLogs, setShowLogs] = useState(false); // State to manage Logs visibility
 
   const handleProjectDataChange = (newData) => {
     setProjectData((prevData) => ({ ...prevData, ...newData }));
@@ -66,13 +68,22 @@ export default function HomePage() {
             isSaved={isSaved}
           />
         );
+      case 4:
+        return (
+          <Logs hostingServerType={projectData.hostingServerType} />
+        );
       default:
         return "Unknown step";
     }
   };
 
   const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    if (activeStep === steps.length) {
+      handleStartTraining(projectData, setResponseData);
+      setShowLogs(true); // Show Logs when Finish is clicked
+    } else {
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    }
   };
 
   const handleBack = () => {
@@ -89,6 +100,7 @@ export default function HomePage() {
       parameterType: "",
       config: {},
     });
+    setShowLogs(false); // Reset Logs visibility
   };
 
   return (
