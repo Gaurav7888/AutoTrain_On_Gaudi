@@ -877,6 +877,7 @@ async def handle_form(
     return {"success": "true"}
 
     
+
 @ui_router.post("/run_training", response_class=JSONResponse)
 async def run_training(
     payload: APICreateProjectModel,

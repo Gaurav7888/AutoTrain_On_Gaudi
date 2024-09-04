@@ -2,8 +2,10 @@ import React, { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import "xterm/css/xterm.css";
 import { SERVER_URL } from "@/lib/constants";
+import { handleStartTraining } from "@/actions/startTraining";
+import ProjectDetails from "./ProjectDetails";
 
-const Logs = ({ hostingServerType }) => {
+const Logs = ({ hostingServerType, projectData }) => {
   const terminalRef = useRef(null);
   const term = useRef(null);
 
@@ -22,6 +24,8 @@ const Logs = ({ hostingServerType }) => {
       fontFamily: "monospace",
       fontSize: 14,
     });
+  
+
 
     if (terminalRef.current) {
       term.current.open(terminalRef.current);
@@ -44,15 +48,19 @@ const Logs = ({ hostingServerType }) => {
     };
   }, [hostingServerType]);
 
+  useEffect(()=>{
+    handleStartTraining(projectData);
+  }, [] );
+
   return (
     <div>
       <h3>Logs</h3>
       <div
         ref={terminalRef}
         style={{
-          width: "100%",
-          height: "500px",
-          overflowY: "auto",
+          width: "fit-content",
+          // height: "63vh",
+          // overflowY: "auto",
           overflowX: "hidden",
           whiteSpace: "pre-wrap",
         }}
