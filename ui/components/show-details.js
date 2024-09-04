@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -8,6 +8,11 @@ import { SERVER_URL } from "@/lib/constants";
 const ShowDetails = ({ task, config, projectName, datasetName, isSaved }) => {
   const [responseData, setResponseData] = useState("");
   const [markdownContent, setMarkdownContent] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    handleShowDetails();
+  }, []);
 
   const fetchMarkdownContent = async () => {
     try {
@@ -47,6 +52,7 @@ const ShowDetails = ({ task, config, projectName, datasetName, isSaved }) => {
       })
       .then((resp) => {
         setResponseData(resp.data);
+        setLoading(false);
         fetchMarkdownContent();
       })
       .catch((err) => {
@@ -55,32 +61,55 @@ const ShowDetails = ({ task, config, projectName, datasetName, isSaved }) => {
   };
 
   return (
-    <Box>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleShowDetails}
-        disabled={isSaved}
-      >
-        Show Script
-      </Button>
-      {markdownContent && (
-        <Box
-          mt={2}
-          sx={{
-            maxHeight: "300px",
-            overflowY: "auto",
-            border: "1px solid #ddd",
-            padding: "1rem",
-          }}
-        >
-          <Typography variant="h6">Content:</Typography>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {markdownContent}
-          </ReactMarkdown>
-        </Box>
+    <>
+      {loading ? (
+        <>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1rem",
+            }}
+          >
+            <CircularProgress />
+            <Typography>Loading Script</Typography>
+          </Box>
+        </>
+      ) : (
+        <>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1rem",
+            }}
+          >
+            {markdownContent && (
+              <Box
+                sx={{
+                  maxHeight: "67vh",
+                  // minWidth: "fit-content",
+                  overflowY: "auto",
+                  border: "1px solid #ddd",
+                  padding: "1rem",
+                  backgroundColor: "#1c1c1c",
+                  color: "white",
+                  borderRadius: "0.5rem",
+                  padding: "0rem 2rem",
+                }}
+              >
+                {/* <Typography variant="h6">Content:</Typography> */}
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {markdownContent}
+                </ReactMarkdown>
+              </Box>
+            )}
+          </Box>
+        </>
       )}
-    </Box>
+    </>
   );
 };
 
