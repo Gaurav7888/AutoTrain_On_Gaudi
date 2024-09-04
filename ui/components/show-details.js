@@ -62,7 +62,7 @@ const ShowDetails = ({ task, config, projectName, datasetName, isSaved }) => {
         onClick={handleShowDetails}
         disabled={isSaved}
       >
-        Show Details
+        Show Script
       </Button>
       {markdownContent && (
         <Box

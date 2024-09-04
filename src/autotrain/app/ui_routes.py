@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import signal
@@ -947,22 +948,21 @@ async def is_model_training(authenticated: bool = Depends(user_authentication)):
 
 async def stream_logs_from_file():
     log_file_path = "autotrain.log"
-
+    
     try:
         with open(log_file_path, "r") as log_file:
+            log_file.seek(0, 2)  # Move the cursor to the end of the file
             while True:
                 line = log_file.readline()
-                if line:
-                    yield line
-                else:
-                    await asyncio.sleep(0.1)
+                if not line:
+                    await asyncio.sleep(0.1)  # Small delay before trying to read the next line
+                    continue
+                yield line.strip()
     except Exception as error:
-        print(f"Error reading log file: {error}")
-        return
+        yield f"Error reading log file: {error}"
 
 @ui_router.get('/stream_logs')
 async def get_workload_logs(request: Request):
-    print("Not enterings stremaing")
     event_generator = stream_logs_from_file()
     return EventSourceResponse(event_generator)
 

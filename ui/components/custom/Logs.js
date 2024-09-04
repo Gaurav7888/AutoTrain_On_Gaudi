@@ -8,10 +8,9 @@ const Logs = ({ hostingServerType }) => {
   const term = useRef(null);
 
   useEffect(() => {
-    // Initialize the terminal
     term.current = new Terminal({
       rows: 30,
-      cols: 150,
+      cols: 130,
       cursorBlink: true,
       rendererType: "canvas",
       theme: {
@@ -28,13 +27,12 @@ const Logs = ({ hostingServerType }) => {
       term.current.open(terminalRef.current);
     }
 
-    // Set up EventSource to stream logs
-    const url = `${SERVER_URL}/ui/logs/stream`;
+    const url = `${SERVER_URL}/ui/stream_logs`;
     const sse = new EventSource(url);
 
     sse.onmessage = (e) => {
-      console.log("Received message: ", e.data); // Debug log
-      term.current.write(e.data + "\n");
+      console.log("Received message: ", e.data);
+      term.current.write(`\r${e.data}\n`);
     };
 
     sse.onerror = (e) => {
@@ -54,7 +52,9 @@ const Logs = ({ hostingServerType }) => {
         style={{
           width: "100%",
           height: "500px",
-          overflow: "auto",
+          overflowY: "auto",
+          overflowX: "hidden",
+          whiteSpace: "pre-wrap",
         }}
       ></div>
     </div>
