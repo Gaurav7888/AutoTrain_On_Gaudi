@@ -1,7 +1,7 @@
 
 include install/Makefile.core.mk
 
-.PHONY: quality style test autotrain server ui app
+.PHONY: install quality style test autotrain server ui app
 
 # Install deps
 install:
@@ -56,4 +56,4 @@ ui:
 	cd ui && npm run dev
 
 app:
-	autotrain app --port 8002 --host 0.0.0.0
+	autotrain app --port 8000 --host 0.0.0.0
