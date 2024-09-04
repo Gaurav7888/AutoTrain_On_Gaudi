@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
+from sse_starlette.sse import EventSourceResponse
 #from nvitop import Device
 
 from autotrain import __version__, logger
@@ -815,7 +816,7 @@ def process_project_creation(
 @ui_router.get("/get_markdown", response_class=PlainTextResponse)
 async def fetch_script():
     markdown_path = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "markdown.md"))
-    print("\n\nMarkdown Path: ", markdown_path)
+    print("BASE_DIR: ", BASE_DIR)
     if not os.path.isfile(markdown_path):
         raise HTTPException(status_code=404, detail="Markdown file not found")
 
@@ -944,6 +945,26 @@ async def is_model_training(authenticated: bool = Depends(user_authentication)):
         return {"model_training": True, "pids": running_jobs}
     return {"model_training": False, "pids": []}
 
+async def stream_logs_from_file():
+    log_file_path = "autotrain.log"
+
+    try:
+        with open(log_file_path, "r") as log_file:
+            while True:
+                line = log_file.readline()
+                if line:
+                    yield line
+                else:
+                    await asyncio.sleep(0.1)
+    except Exception as error:
+        print(f"Error reading log file: {error}")
+        return
+
+@ui_router.get('/stream_logs')
+async def get_workload_logs(request: Request):
+    print("Not enterings stremaing")
+    event_generator = stream_logs_from_file()
+    return EventSourceResponse(event_generator)
 
 @ui_router.get("/logs", response_class=JSONResponse)
 async def fetch_logs(authenticated: bool = Depends(user_authentication)):
