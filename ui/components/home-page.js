@@ -11,7 +11,7 @@ import {
 import ProjectDetails from "./custom/ProjectDetails";
 import ModelSelection from "./custom/ModelSelection";
 import Parameters from "./custom/Parameters";
-import ShowDetails from "./show-details";
+import ShowDetails from "./custom/show-details";
 import Logs from "./custom/Logs"; // Import the Logs component
 import { handleStartTraining } from "@/actions/startTraining";
 
@@ -70,7 +70,15 @@ export default function HomePage() {
         );
       case 4:
         return (
-          <Logs hostingServerType={projectData.hostingServerType} />
+          <Logs hostingServerType={projectData.hostingServerType} projectData={projectData} />
+        //   <Button
+        //   variant="contained"
+        //   color="inherit"
+        //   onClick={handleStartTraining(projectData)}
+        //   sx={{ mr: 1 }}
+        // >
+        //   Start training
+        // </Button>
         );
       default:
         return "Unknown step";
@@ -162,7 +170,7 @@ export default function HomePage() {
         >
           Back
         </Button>
-        <Button variant="contained" onClick={handleNext}>
+        <Button variant="contained" onClick={steps.length == 3 ? handleStartTraining(projectData) : handleNext}>
           {activeStep === steps.length - 1 ? "Finish" : "Next"}
         </Button>
       </Box>

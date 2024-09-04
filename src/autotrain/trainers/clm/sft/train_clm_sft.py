@@ -241,7 +241,8 @@ def train(config):
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
-
-args = parse_args()
-training_config = json.load(open(args.training_config))
-train(training_config)
+if __name__ == "__main__":
+    args = parse_args()
+    training_config = json.load(open(args.training_config))
+    _config = LLMTrainingParams(**training_config)
+    train(_config)

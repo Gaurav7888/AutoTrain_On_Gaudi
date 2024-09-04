@@ -2,7 +2,8 @@ import { SERVER_URL } from "@/lib/constants";
 import axios from "axios";
 
 export const handleStartTraining = (projectData) => {
-  let url = `${SERVER_URL}/ui/create_project`;
+  
+  let url = `${SERVER_URL}/ui/run_training`;
   let payload = {
     task: projectData.task,
     params: projectData.config,
@@ -15,6 +16,7 @@ export const handleStartTraining = (projectData) => {
     valid_split: "test", // TODO: update this
     username: "thebeginner86",
   };
+  console.log("Payload: ", payload)
   axios
     .post(url, JSON.stringify(payload), {
       headers: {

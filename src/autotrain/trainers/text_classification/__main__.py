@@ -91,6 +91,11 @@ class DataTrainingArguments:
     the command line.
     """
 
+    project_name: Optional[str] = field(
+        default="None",
+        metadata={},
+    )
+
     task_name: Optional[str] = field(
         default=None,
         metadata={},
