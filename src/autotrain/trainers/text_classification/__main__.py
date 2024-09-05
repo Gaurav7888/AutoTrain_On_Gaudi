@@ -1,3 +1,4 @@
+    
 import argparse
 import json
 import torch
@@ -270,15 +271,20 @@ class ModelArguments:
 import mlflow
 import mlflow.pytorch
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+root_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
 
 
+ml_path = os.path.join(root_path,"mlruns")
+mlflow.set_tracking_uri(ml_path)
 mlflow.set_experiment("text classification")
+
 @monitor
 def train(config):
     with mlflow.start_run() as run:
         parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
-        model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[2])
-        # model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=config)
+        model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[2]))
         #model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file='/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json')
         # print("model_args", model_args)
         # print("data_args", data_args)
@@ -547,11 +553,6 @@ def train(config):
             pause_space(config)
 
 
-
-
-
-
-
 #adding a custom call back
 from copy import deepcopy
 class CustomCallback(TrainerCallback):
@@ -736,10 +737,10 @@ class UnifiedLoggingCallback(TrainerCallback):
     def __init__(self, trainer) -> None:
         super().__init__()
         self._trainer = trainer
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(script_dir)
-        markdown_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
-        path = os.path.join(markdown_path,'model_metrics.log')
+        # script_dir = os.path.dirname(os.path.abspath(__file__))
+        # parent_dir = os.path.dirname(script_dir)
+        # root_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
+        path = os.path.join(root_path,'model_metrics.log')
         logger.add(path, format="{time} | {level} | {message}", level="INFO")
         
     def on_log(self, args, state, control, logs=None, **kwargs):
@@ -755,14 +756,9 @@ class UnifiedLoggingCallback(TrainerCallback):
                 logger.info(f"{loguru_metrics}")
             
             # Log to MLflow
-            for key, value in logs.items():
-                if key == 'memory_allocated (GB)':
-                    continue
-                elif key == 'total_memory_available (GB)':
-                    continue
-                elif key == 'max_memory_allocated (GB)': 
-                    continue
-                mlflow.log_metric(f"log_{key}", value, step=state.global_step)
+                for key, value in loguru_metrics.items():
+                    
+                    mlflow.log_metric(f"{key}", value, step=state.global_step)
     
     def on_epoch_end(self, args, state, control, **kwargs):
         if control.should_evaluate:
@@ -814,6 +810,11 @@ class UnifiedLoggingCallback(TrainerCallback):
 
             
             
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--training_config", type=str, required=True, help="Path to the training configuration JSON file.")
+    return parser.parse_args()
+
 
 
 if __name__ == "__main__":
@@ -821,7 +822,3 @@ if __name__ == "__main__":
     training_config = json.load(open(args.training_config))
     #training_config = json.load(open('/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json'))
     train(training_config)
-    
-    
-    
-    
