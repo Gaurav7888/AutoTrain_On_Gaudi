@@ -56,4 +56,4 @@ ui:
 	cd ui && npm run dev
 
 app:
-	autotrain app --port 8002 --host 0.0.0.0
+	autotrain app --port 8000 --host 0.0.0.0
