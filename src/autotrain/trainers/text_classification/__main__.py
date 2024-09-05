@@ -277,8 +277,9 @@ mlflow.set_experiment("text classification")
 def train(config):
     with mlflow.start_run() as run:
         parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
-        # model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[2]))
-        model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file='/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json')
+        # model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[2])
+        model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=config)
+        #model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file='/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json')
         # print("model_args", model_args)
         # print("data_args", data_args)
         print("training_args", gaudi_training_args)
@@ -817,8 +818,8 @@ class UnifiedLoggingCallback(TrainerCallback):
 
 if __name__ == "__main__":
     args = parse_args()
-    # training_config = json.load(open(args.training_config))
-    training_config = json.load(open('/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json'))
+    training_config = json.load(open(args.training_config))
+    #training_config = json.load(open('/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json'))
     train(training_config)
     
     
