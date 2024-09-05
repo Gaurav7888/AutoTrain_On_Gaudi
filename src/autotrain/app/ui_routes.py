@@ -817,7 +817,6 @@ def process_project_creation(
 @ui_router.get("/get_markdown", response_class=PlainTextResponse)
 async def fetch_script():
     markdown_path = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "markdown.md"))
-    print("BASE_DIR: ", BASE_DIR)
     if not os.path.isfile(markdown_path):
         raise HTTPException(status_code=404, detail="Markdown file not found")
 
@@ -848,7 +847,6 @@ async def handle_form(
         script_path = os.path.join(TRAINERS_DIR, "clm/sft", "train_clm_sft.py")
     else:
         script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
-    print("\n\n\n\n\nSCRIPT PATH: ", script_path)
     extract_function_name = 'train'
 
     # Load the script as a module

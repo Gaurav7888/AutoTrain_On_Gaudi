@@ -12,7 +12,8 @@ import ProjectDetails from "./custom/ProjectDetails";
 import ModelSelection from "./custom/ModelSelection";
 import Parameters from "./custom/Parameters";
 import ShowDetails from "./custom/show-details";
-import Logs from "./custom/Logs"; // Import the Logs component
+import Logs from "./custom/Logs"; 
+import Dashboard from "./custom/Dashboards";
 import { handleStartTraining } from "@/actions/startTraining";
 
 const steps = ["Project Details", "Model Selection", "Parameters", "Script", "Logs and Metrics", "Outcome"];
@@ -70,7 +71,10 @@ export default function HomePage() {
         );
       case 4:
         return (
-          <Logs hostingServerType={projectData.hostingServerType} projectData={projectData} />
+          <>
+            <Logs hostingServerType={projectData.hostingServerType} projectData={projectData} />
+            <Dashboard url="http://g2-r2-2.iind.intel.com:30091/d/adw5vgtarwn40b/tgi-dashboard?orgId=1" />
+          </>
         //   <Button
         //   variant="contained"
         //   color="inherit"
