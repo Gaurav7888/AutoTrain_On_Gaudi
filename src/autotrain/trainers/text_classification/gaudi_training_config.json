@@ -7,9 +7,10 @@
     "column_mapping_text_column": "text",
     "column_mapping_target_column": "label",
     "max_seq_length": 512,
-    "num_train_epochs": 4,
-    "per_device_train_batch_size": 1,
-    "learning_rate": 2e-5,
+    "num_train_epochs": 1,
+    
+    
+    "learning_rate": 7e-5,
     "optim": "adamw_torch_fused",
     "lr_scheduler_type": "reduce_lr_on_plateau",
     "gradient_accumulation_steps": 1,
@@ -18,10 +19,57 @@
     "token": "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",
     "push_to_hub": false,
     "use_habana": true,
-    "output_dir": "./",
+    "output_dir": "./outputs",
     "use_hpu_graphs": true,
     "use_hpu_graphs_for_training": true,
     "use_hpu_graphs_for_inference": true,
     "non_blocking_data_copy": false,
-    "evaluation_strategy": "epoch"
+    "evaluation_strategy": "epoch",
+    "save_strategy": "epoch",
+    
+    
+    "seed": 42,
+    
+   
+    
+    
+    
+    
+   
+    "warmup_ratio": 0.1,
+    
+    
+    "weight_decay": 0.0,
+    
+    
+    "logging_strategy":"epoch",
+    "save_total_limit": 1,
+    "auto_find_batch_size": true,
+    "use_ipex":true,
+    "adam_beta1":0.9,
+    "adam_beta2":0.9,
+  
+ 
+    "save_steps":500,
+    
+    "max_grad_norm":1.0,
+  
+    
+    "report_to":"tensorboard",
+    "logging_dir":"output_dir/runs/CURRENT_DATETIME_HOSTNAME",
+    "logging_first_step":false,
+    "logging_steps":500,
+    "logging_nan_inf_filter":true,
+
+    "jit_mode_eval":false,
+    
+    "bf16":false,
+    "fp16":false,
+    "load_best_model_at_end":true,
+    "metric_for_best_model":"loss",
+    "gradient_checkpointing":false,
+    "resume_from_checkpoint":"none",
+    "skip_memory_metrics":true
+    
+    
 }
