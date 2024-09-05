@@ -31,6 +31,7 @@ from optimum.habana.utils import set_seed
 
 @dataclass
 class ScriptArguments:
+    project_name: Optional[str] = field(default="TestProject", metadata={"help": "the project name"})
     model_name_or_path: Optional[str] = field(default="meta-llama/Llama-2-7b-hf", metadata={"help": "the model name"})
     #output_dir: Optional[str] = field(default="./", metadata={"help": "output directory name"})
     dataset_name: Optional[str] = field(default=None, metadata={"help": "the dataset name"})
@@ -241,8 +242,8 @@ def train(config):
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
-if __name__ == "__main__":
-    args = parse_args()
-    training_config = json.load(open(args.training_config))
-    _config = LLMTrainingParams(**training_config)
-    train(_config)
+
+args = parse_args()
+training_config = json.load(open(args.training_config))
+_config = LLMTrainingParams(**training_config)
+train(_config)
