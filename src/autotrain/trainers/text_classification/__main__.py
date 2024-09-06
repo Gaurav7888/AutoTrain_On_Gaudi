@@ -283,6 +283,8 @@ mlflow.set_experiment("text classification")
 @monitor
 def train(config):
     with mlflow.start_run() as run:
+        path = os.path.join(root_path,'model_metrics.log')
+        logger.add(path, format="{time} | {level} | {message}", level="INFO")
         parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
         model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[2]))
         #model_args, data_args, gaudi_training_args = parser.parse_json_file(json_file='/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json')
@@ -403,7 +405,7 @@ def train(config):
         # else:
         #     logging_steps = config.logging_steps
 
-        #logger.info(f"Logging steps: {logging_steps}")
+        # logger.info(f"Logging steps: {logging_steps}")
 
 
         # training_args = dict(
@@ -430,9 +432,11 @@ def train(config):
         # )
 
         if model_args.mixed_precision == "fp16":
-            training_args["fp16"] = True
+            pass
+            # training_args["fp16"] = True
         if model_args.mixed_precision == "bf16":
-            training_args["bf16"] = True
+            pass
+            # training_args["bf16"] = True
 
         # if data_args.valid_split is not None:
         #     early_stop = EarlyStoppingCallback(
@@ -503,7 +507,7 @@ def train(config):
         # )
 
         trainer.remove_callback(PrinterCallback)
-        trainer_result = trainer.train()
+        trainer.train()
         # for metric_name,metric_value in trainer_result.metrics.items():
         #     if metric_name == 'memory_allocated (GB)':
         #         mlflow.log_metric('memory_allocated_GB', metric_value)
@@ -520,25 +524,21 @@ def train(config):
         mlflow.pytorch.log_model(model,"model")
         # mlflow.log_artifact("mlflow_dir")
         print("Finished training, saving model...")
-        #logger.info("Finished training, saving model...")
-        # project_name = "trial"
-        # trainer.save_model(project_name)
-        # trainer.log_metrics("train", trainer_result.metrics)
-        # trainer.save_metrics("train", trainer_result.metrics)
-        # tokenizer.save_pretrained(project_name)
-        # trainer.save_state()
-
-        # model_card = utils.create_model_card(config, trainer, num_classes)
+        logger.info("Finished training, saving model...")
+        project_name = "trial"
+        trainer.save_model(project_name)
+        tokenizer.save_pretrained(project_name)
+        model_card = utils.create_model_card(config, trainer, num_classes)
 
         # # save model card to output directory as README.md
-        # with open(f"{config.project_name}/README.md", "w") as f:
-        #     f.write(model_card)
-        push_to_hub = False
-        if push_to_hub:
+        with open(f"{config.project_name}/README.md", "w") as f:
+            f.write(model_card)
+        
+        if config.push_to_hub:
             if PartialState().process_index == 0:
                 remove_autotrain_data(config)
                 save_training_params(config)
-                #logger.info("Pushing model to hub...")
+                logger.info("Pushing model to hub...")
                 api = HfApi(token=config.token)
                 api.create_repo(
                     repo_id=f"{config.username}/{config.project_name}", repo_type="model", private=True, exist_ok=True
@@ -740,8 +740,8 @@ class UnifiedLoggingCallback(TrainerCallback):
         # script_dir = os.path.dirname(os.path.abspath(__file__))
         # parent_dir = os.path.dirname(script_dir)
         # root_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
-        path = os.path.join(root_path,'model_metrics.log')
-        logger.add(path, format="{time} | {level} | {message}", level="INFO")
+        # path = os.path.join(root_path,'model_metrics.log')
+        # logger.add(path, format="{time} | {level} | {message}", level="INFO")
         
     def on_log(self, args, state, control, logs=None, **kwargs):
         if logs is not None:
@@ -807,8 +807,6 @@ class UnifiedLoggingCallback(TrainerCallback):
             return control_copy
         else:
             logger.info(f"Epoch {state.epoch} ended without evaluation.")
-
-            
             
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -820,6 +818,4 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     training_config = json.load(open(args.training_config))
-    #training_config = json.load(open('/root/kubernetes_files/varshit/AutoTrain_On_Gaudi/src/autotrain/trainers/text_classification/gaudi_training_config.json'))
     train(training_config)
-    
