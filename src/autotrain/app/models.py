@@ -56,31 +56,36 @@ def _fetch_text_classification_models():
 
 
 def _fetch_llm_models():
-    hub_models = list(
-        list_models(
-            task="text-generation",
-            library="transformers",
-            sort="downloads",
-            direction=-1,
-            limit=100,
-            full=False,
-        )
-    )
-    hub_models = get_sorted_models(hub_models)
-    trending_models = list(
-        list_models(
-            task="text-generation",
-            library="transformers",
-            sort="likes7d",
-            direction=-1,
-            limit=30,
-            full=False,
-        )
-    )
-    if len(trending_models) > 0:
-        trending_models = get_sorted_models(trending_models)
-        hub_models = [m for m in hub_models if m not in trending_models]
-        hub_models = trending_models + hub_models
+    # hub_models = list(
+    #     list_models(
+    #         task="text-generation",
+    #         library="transformers",
+    #         sort="downloads",
+    #         direction=-1,
+    #         limit=100,
+    #         full=False,
+    #     )
+    # )
+    # hub_models = get_sorted_models(hub_models)
+    # trending_models = list(
+    #     list_models(
+    #         task="text-generation",
+    #         library="transformers",
+    #         sort="likes7d",
+    #         direction=-1,
+    #         limit=30,
+    #         full=False,
+    #     )
+    # )
+    # if len(trending_models) > 0:
+    #     trending_models = get_sorted_models(trending_models)
+    #     hub_models = [m for m in hub_models if m not in trending_models]
+    #     hub_models = trending_models + hub_models
+    hub_models = [
+        'gpt2', 'bigscience/bloom', 'meta-llama/Llama-2-70b-hf', 'tiiuae/falcon-7b',
+        'tiiuae/falcon-40b', 'bigcode/starcoder', 'mistralai/Mixtral-8x7B-v0.1',
+        'tiiuae/falcon-180B', 'microsoft/phi-2'
+    ]
     return hub_models
 
 
