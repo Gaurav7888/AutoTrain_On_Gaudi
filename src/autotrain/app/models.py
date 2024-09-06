@@ -50,8 +50,7 @@ def _fetch_text_classification_models():
     #     hub_models = [m for m in hub_models if m not in trending_models]
     #     hub_models = trending_models + hub_models
 
-    hub_models = ['meta-llama/LlamaGuard-7b', 'bert-large-uncased-whole-word-masking']
-    # pprint(hub_models)
+    hub_models = ['meta-llama/LlamaGuard-7b', 'bert-large-uncased-whole-word-masking', 'google-bert/bert-base-uncased']
     return hub_models
 
 

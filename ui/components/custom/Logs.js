@@ -58,7 +58,9 @@ const Logs = ({ hostingServerType, projectData }) => {
         >
           <Box
             sx={{
+              minHeight: "10vh",
               maxHeight: "67vh",
+              width: "100%",
               overflowY: "auto",
               border: "1px solid #ddd",
               padding: "1rem",
