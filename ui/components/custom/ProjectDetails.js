@@ -17,7 +17,15 @@ export default function ProjectDetails({ projectData, onDataChange }) {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        // alignItems: "center",
+        // justifyContent: "center",
+        gap: "1rem",
+      }}
+    >
       <Box sx={{ display: "flex", flexDirection: "row", gap: "1rem" }}>
         <TextField
           label="Project Name"

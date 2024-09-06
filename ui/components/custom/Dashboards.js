@@ -4,7 +4,7 @@ const Dashboard = ({ url }) => {
   const containerStyle = {
     display: "flex",
     flexDirection: "column",
-    width: "100%",
+    width: "100vw",
     height: "100%",
     minHeight: "300px",
     flexGrow: 1,
