@@ -1,50 +1,31 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
-import "xterm/css/xterm.css";
 import { SERVER_URL } from "@/lib/constants";
 import { handleStartTraining } from "@/actions/startTraining";
 import ProjectDetails from "./ProjectDetails";
+import { Box } from "@mui/material";
 
 const Logs = ({ hostingServerType, projectData }) => {
-  const terminalRef = useRef(null);
-  const term = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [logContent, setLogContent] = useState("");
+   const sseRef = useRef(null);
 
   useEffect(() => {
-    term.current = new Terminal({
-      rows: 30,
-      cols: 130,
-      cursorBlink: true,
-      rendererType: "canvas",
-      theme: {
-        background: "#000000",
-        foreground: "#ffffff",
-      },
-      letterSpacing: 0,
-      scrollback: 1000,
-      fontFamily: "monospace",
-      fontSize: 14,
-    });
-  
-
-
-    if (terminalRef.current) {
-      term.current.open(terminalRef.current);
-    }
-
     const url = `${SERVER_URL}/ui/stream_logs`;
-    const sse = new EventSource(url);
+    sseRef.current = new EventSource(url);
 
-    sse.onmessage = (e) => {
+    sseRef.current.onmessage = (e) => {
       console.log("Received message: ", e.data);
-      term.current.write(`\r${e.data}\n`);
+      setLogContent((prevLogs) => `${prevLogs}\n${e.data}`);
+      // term.current.write(`\r${e.data}\n`);
     };
 
-    sse.onerror = (e) => {
+    sseRef.current.onerror = (e) => {
       console.error("EventSource error: ", e);
-      sse.close();
+      sseRef.current.close();
     };
     return () => {
-      sse.close();
+      sseRef.current.close();
     };
   }, [hostingServerType]);
 
@@ -53,19 +34,47 @@ const Logs = ({ hostingServerType, projectData }) => {
   }, [] );
 
   return (
-    <div>
-      <h3>Logs</h3>
-      <div
-        ref={terminalRef}
-        style={{
-          width: "fit-content",
-          // height: "63vh",
-          // overflowY: "auto",
-          overflowX: "hidden",
-          whiteSpace: "pre-wrap",
-        }}
-      ></div>
-    </div>
+    <>
+      {loading ? (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+          }}
+        >
+          <CircularProgress />
+          <Typography>Loading Script</Typography>
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+          }}
+        >
+          <Box
+            sx={{
+              maxHeight: "67vh",
+              overflowY: "auto",
+              border: "1px solid #ddd",
+              padding: "1rem",
+              backgroundColor: "#2e2e2e", // Dark grey background
+              color: "white", // White text
+              fontFamily: "monospace", // Monospace font
+              borderRadius: "0.5rem",
+              padding: "0rem 2rem",
+              whiteSpace: "pre-wrap", // Keep formatting with line breaks
+            }}
+          >
+            {logContent}
+          </Box>
+        </Box>
+      )}
+    </>
   );
 };
 
