@@ -12,7 +12,8 @@ import { tasksOpts } from "@/config/tasksConfig";
 
 export default function ProjectDetails({ projectData, onDataChange }) {
   const handleChange = (field, value) => {
-    onDataChange({ [field]: value });
+    const newValue = projectData[field] === value ? "" : value;
+    onDataChange({ [field]: newValue });
   };
 
   return (
@@ -58,18 +59,19 @@ export default function ProjectDetails({ projectData, onDataChange }) {
             </Typography>
             {category.options.map((option) => (
               <Box
+                disabled={option.enabled}
                 onClick={() => handleChange("task", option.value)}
                 key={option.value}
                 style={{
-                  backgroundColor:
-                    projectData.task === option.value
+                  backgroundColor: option.enabled
+                    ? projectData.task === option.value
                       ? category.color
-                      : "white",
-                  color: projectData.task === option.value ? "white" : "black",
-                  // boxShadow:
-                  //   projectData.task === option.value
-                  //     ? "0 0 5px #2155bf"
-                  //     : "0 0 5px white",
+                      : "white"
+                    : "#c4c4c4",
+                  color:
+                    option.enabled && projectData.task === option.value
+                      ? "white"
+                      : "black",
                   transition: "background-color 0.3s",
                   width: "85%",
                   cursor: "pointer",
