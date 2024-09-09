@@ -11,6 +11,7 @@ from transformers import (
     EarlyStoppingCallback,
     Trainer,
     TrainingArguments,
+    TrainerCallback
 )
 from transformers.trainer_callback import PrinterCallback
 
@@ -36,199 +37,321 @@ def parse_args():
     return parser.parse_args()
 
 
-@monitor
+
+import mlflow
+import mlflow.pytorch
+import os
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+root_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
+
+
+ml_path = os.path.join(root_path,"mlruns")
+mlflow.set_tracking_uri(ml_path)
+mlflow.set_experiment("image classification")
+# @monitor
 def train(config):
-    if isinstance(config, dict):
-        config = ImageClassificationParams(**config)
-
-    valid_data = None
-    if config.data_path == f"{config.project_name}/autotrain-data":
-        train_data = load_from_disk(config.data_path)[config.train_split]
-    else:
-        if ":" in config.train_split:
-            dataset_config_name, split = config.train_split.split(":")
-            train_data = load_dataset(
-                config.data_path,
-                name=dataset_config_name,
-                split=split,
-                token=config.token,
-            )
-        else:
-            train_data = load_dataset(
-                config.data_path,
-                split=config.train_split,
-                token=config.token,
-            )
-
-    if config.valid_split is not None:
+    with mlflow.start_run() as run:
+        # mlflow.log_params(config.__dict__)
+        path = os.path.join(root_path,'model_metrics.log')
+        logger.add(path, format="{time} | {level} | {message}", level="INFO")
+        if isinstance(config, dict):
+            config = ImageClassificationParams(**config)
+            
+        valid_data = None
         if config.data_path == f"{config.project_name}/autotrain-data":
-            valid_data = load_from_disk(config.data_path)[config.valid_split]
+            train_data = load_from_disk(config.data_path)[config.train_split]
         else:
-            if ":" in config.valid_split:
-                dataset_config_name, split = config.valid_split.split(":")
-                valid_data = load_dataset(
+            if ":" in config.train_split:
+                dataset_config_name, split = config.train_split.split(":")
+                train_data = load_dataset(
                     config.data_path,
                     name=dataset_config_name,
                     split=split,
                     token=config.token,
                 )
             else:
-                valid_data = load_dataset(
+                train_data = load_dataset(
                     config.data_path,
-                    split=config.valid_split,
+                    split=config.train_split,
                     token=config.token,
                 )
 
-    logger.info(f"Train data: {train_data}")
-    logger.info(f"Valid data: {valid_data}")
-
-    classes = train_data.features[config.target_column].names
-    logger.info(f"Classes: {classes}")
-    label2id = {c: i for i, c in enumerate(classes)}
-    num_classes = len(classes)
-
-    if num_classes < 2:
-        raise ValueError("Invalid number of classes. Must be greater than 1.")
-
-    if config.valid_split is not None:
-        num_classes_valid = len(valid_data.unique(config.target_column))
-        if num_classes_valid != num_classes:
-            raise ValueError(
-                f"Number of classes in train and valid are not the same. Training has {num_classes} and valid has {num_classes_valid}"
-            )
-
-    model_config = AutoConfig.from_pretrained(
-        config.model,
-        num_labels=num_classes,
-        trust_remote_code=ALLOW_REMOTE_CODE,
-        token=config.token,
-    )
-    model_config._num_labels = len(label2id)
-    model_config.label2id = label2id
-    model_config.id2label = {v: k for k, v in label2id.items()}
-
-    try:
-        model = AutoModelForImageClassification.from_pretrained(
-            config.model,
-            config=model_config,
-            trust_remote_code=ALLOW_REMOTE_CODE,
-            token=config.token,
-            ignore_mismatched_sizes=True,
-        )
-    except OSError:
-        model = AutoModelForImageClassification.from_pretrained(
-            config.model,
-            config=model_config,
-            from_tf=True,
-            trust_remote_code=ALLOW_REMOTE_CODE,
-            token=config.token,
-            ignore_mismatched_sizes=True,
-        )
-
-    image_processor = AutoImageProcessor.from_pretrained(
-        config.model,
-        token=config.token,
-        trust_remote_code=ALLOW_REMOTE_CODE,
-    )
-    train_data, valid_data = utils.process_data(train_data, valid_data, image_processor, config)
-
-    if config.logging_steps == -1:
         if config.valid_split is not None:
-            logging_steps = int(0.2 * len(valid_data) / config.batch_size)
-        else:
-            logging_steps = int(0.2 * len(train_data) / config.batch_size)
-        if logging_steps == 0:
-            logging_steps = 1
-        if logging_steps > 25:
-            logging_steps = 25
-        config.logging_steps = logging_steps
-    else:
-        logging_steps = config.logging_steps
+            if config.data_path == f"{config.project_name}/autotrain-data":
+                valid_data = load_from_disk(config.data_path)[config.valid_split]
+            else:
+                if ":" in config.valid_split:
+                    dataset_config_name, split = config.valid_split.split(":")
+                    valid_data = load_dataset(
+                        config.data_path,
+                        name=dataset_config_name,
+                        split=split,
+                        token=config.token,
+                    )
+                else:
+                    valid_data = load_dataset(
+                        config.data_path,
+                        split=config.valid_split,
+                        token=config.token,
+                    )
 
-    logger.info(f"Logging steps: {logging_steps}")
+        logger.info(f"Train data: {train_data}")
+        logger.info(f"Valid data: {valid_data}")
+        
 
-    training_args = dict(
-        output_dir=config.project_name,
-        per_device_train_batch_size=config.batch_size,
-        per_device_eval_batch_size=2 * config.batch_size,
-        learning_rate=config.lr,
-        num_train_epochs=config.epochs,
-        eval_strategy=config.eval_strategy if config.valid_split is not None else "no",
-        logging_steps=logging_steps,
-        save_total_limit=config.save_total_limit,
-        save_strategy=config.eval_strategy if config.valid_split is not None else "no",
-        gradient_accumulation_steps=config.gradient_accumulation,
-        report_to=config.log,
-        auto_find_batch_size=config.auto_find_batch_size,
-        lr_scheduler_type=config.scheduler,
-        optim=config.optimizer,
-        warmup_ratio=config.warmup_ratio,
-        weight_decay=config.weight_decay,
-        max_grad_norm=config.max_grad_norm,
-        push_to_hub=False,
-        load_best_model_at_end=True if config.valid_split is not None else False,
-        ddp_find_unused_parameters=False,
-    )
+        classes = train_data.features[config.target_column].names
+        logger.info(f"Classes: {classes}")
+        label2id = {c: i for i, c in enumerate(classes)}
+        num_classes = len(classes)
 
-    if config.mixed_precision == "fp16":
-        training_args["fp16"] = True
-    if config.mixed_precision == "bf16":
-        training_args["bf16"] = True
+        if num_classes < 2:
+            raise ValueError("Invalid number of classes. Must be greater than 1.")
 
-    if config.valid_split is not None:
-        early_stop = EarlyStoppingCallback(
-            early_stopping_patience=config.early_stopping_patience,
-            early_stopping_threshold=config.early_stopping_threshold,
+        if config.valid_split is not None:
+            num_classes_valid = len(valid_data.unique(config.target_column))
+            if num_classes_valid != num_classes:
+                raise ValueError(
+                    f"Number of classes in train and valid are not the same. Training has {num_classes} and valid has {num_classes_valid}"
+                )
+
+        model_config = AutoConfig.from_pretrained(
+            config.model,
+            num_labels=num_classes,
+            trust_remote_code=ALLOW_REMOTE_CODE,
+            token=config.token,
         )
-        callbacks_to_use = [early_stop]
-    else:
-        callbacks_to_use = []
+        model_config._num_labels = len(label2id)
+        model_config.label2id = label2id
+        model_config.id2label = {v: k for k, v in label2id.items()}
 
-    callbacks_to_use.extend([UploadLogs(config=config), LossLoggingCallback(), TrainStartCallback()])
+        try:
+            model = AutoModelForImageClassification.from_pretrained(
+                config.model,
+                config=model_config,
+                trust_remote_code=ALLOW_REMOTE_CODE,
+                token=config.token,
+                ignore_mismatched_sizes=True,
+            )
+        except OSError:
+            model = AutoModelForImageClassification.from_pretrained(
+                config.model,
+                config=model_config,
+                from_tf=True,
+                trust_remote_code=ALLOW_REMOTE_CODE,
+                token=config.token,
+                ignore_mismatched_sizes=True,
+            )
 
-    args = TrainingArguments(**training_args)
-    trainer_args = dict(
-        args=args,
-        model=model,
-        callbacks=callbacks_to_use,
-        compute_metrics=(
-            utils._binary_classification_metrics if num_classes == 2 else utils._multi_class_classification_metrics
-        ),
-    )
+        image_processor = AutoImageProcessor.from_pretrained(
+            config.model,
+            token=config.token,
+            trust_remote_code=ALLOW_REMOTE_CODE,
+        )
+        train_data, valid_data = utils.process_data(train_data, valid_data, image_processor, config)
 
-    trainer = Trainer(
-        **trainer_args,
-        train_dataset=train_data,
-        eval_dataset=valid_data,
-    )
-    trainer.remove_callback(PrinterCallback)
-    trainer.train()
+        if config.logging_steps == -1:
+            if config.valid_split is not None:
+                logging_steps = int(0.2 * len(valid_data) / config.batch_size)
+            else:
+                logging_steps = int(0.2 * len(train_data) / config.batch_size)
+            if logging_steps == 0:
+                logging_steps = 1
+            if logging_steps > 25:
+                logging_steps = 25
+            config.logging_steps = logging_steps
+        else:
+            logging_steps = config.logging_steps
 
-    logger.info("Finished training, saving model...")
-    trainer.save_model(config.project_name)
-    image_processor.save_pretrained(config.project_name)
+        logger.info(f"Logging steps: {logging_steps}")
 
-    model_card = utils.create_model_card(config, trainer, num_classes)
+        training_args = dict(
+            output_dir=config.project_name,
+            per_device_train_batch_size=config.batch_size,
+            per_device_eval_batch_size=2 * config.batch_size,
+            learning_rate=config.lr,
+            num_train_epochs=config.epochs,
+            # Change 'eval_strategy' to 'evaluation_strategy'
+            evaluation_strategy=config.eval_strategy if config.valid_split is not None else "no",
+            logging_steps=logging_steps,
+            save_total_limit=config.save_total_limit,
+            # Change 'eval_strategy' to 'evaluation_strategy' here as well
+            save_strategy=config.eval_strategy if config.valid_split is not None else "no",
+            gradient_accumulation_steps=config.gradient_accumulation,
+            report_to=config.log,
+            auto_find_batch_size=config.auto_find_batch_size,
+            lr_scheduler_type=config.scheduler,
+            optim=config.optimizer,
+            warmup_ratio=config.warmup_ratio,
+            weight_decay=config.weight_decay,
+            max_grad_norm=config.max_grad_norm,
+            push_to_hub=False,
+            load_best_model_at_end=True if config.valid_split is not None else False,
+            ddp_find_unused_parameters=False,
+        )
+        mlflow.log_params(config.__dict__)
 
-    # save model card to output directory as README.md
-    with open(f"{config.project_name}/README.md", "w") as f:
-        f.write(model_card)
+        if config.mixed_precision == "fp16":
+            training_args["fp16"] = True
+        if config.mixed_precision == "bf16":
+            training_args["bf16"] = True
 
-    if config.push_to_hub:
+        if config.valid_split is not None:
+            early_stop = EarlyStoppingCallback(
+                early_stopping_patience=config.early_stopping_patience,
+                early_stopping_threshold=config.early_stopping_threshold,
+            )
+            callbacks_to_use = [early_stop]
+        else:
+            callbacks_to_use = []
+
+        callbacks_to_use.extend([UploadLogs(config=config), LossLoggingCallback(), TrainStartCallback()])
+
+        args = TrainingArguments(**training_args)
+        trainer_args = dict(
+            args=args,
+            model=model,
+            callbacks=callbacks_to_use,
+            compute_metrics=(
+                utils._binary_classification_metrics if num_classes == 2 else utils._multi_class_classification_metrics
+            ),
+        )
+
+        trainer = Trainer(
+            **trainer_args,
+            train_dataset=train_data,
+            eval_dataset=valid_data,
+        )
+        trainer.remove_callback(PrinterCallback)
+        trainer.add_callback(UnifiedLoggingCallback(trainer))
+        trainer.train()
+        
+        logger.info("Finished training, saving model...")
+        trainer.save_model(config.project_name)
+        image_processor.save_pretrained(config.project_name)
+
+        model_card = utils.create_model_card(config, trainer, num_classes)
+
+        # save model card to output directory as README.md
+        with open(f"{config.project_name}/README.md", "w") as f:
+            f.write(model_card)
+
+        if config.push_to_hub:
+            if PartialState().process_index == 0:
+                remove_autotrain_data(config)
+                save_training_params(config)
+                logger.info("Pushing model to hub...")
+                api = HfApi(token=config.token)
+                api.create_repo(
+                    repo_id=f"{config.username}/{config.project_name}", repo_type="model", private=True, exist_ok=True
+                )
+                api.upload_folder(
+                    folder_path=config.project_name, repo_id=f"{config.username}/{config.project_name}", repo_type="model"
+                )
+
         if PartialState().process_index == 0:
-            remove_autotrain_data(config)
-            save_training_params(config)
-            logger.info("Pushing model to hub...")
-            api = HfApi(token=config.token)
-            api.create_repo(
-                repo_id=f"{config.username}/{config.project_name}", repo_type="model", private=True, exist_ok=True
-            )
-            api.upload_folder(
-                folder_path=config.project_name, repo_id=f"{config.username}/{config.project_name}", repo_type="model"
-            )
+            pause_space(config)
 
-    if PartialState().process_index == 0:
-        pause_space(config)
+from copy import deepcopy
+class UnifiedLoggingCallback(TrainerCallback):
+    
+    def __init__(self, trainer) -> None:
+        super().__init__()
+        self._trainer = trainer
+        # script_dir = os.path.dirname(os.path.abspath(__file__))
+        # parent_dir = os.path.dirname(script_dir)
+        # root_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
+        # path = os.path.join(root_path,'model_metrics.log')
+        # logger.add(path, format="{time} | {level} | {message}", level="INFO")
+        
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is not None:
+            if 'loss' in logs and 'grad_norm' in logs and 'learning_rate' in logs:
+            # Log to Loguru
+                loguru_metrics = {
+                    "epoch":logs.get("epoch","N/A"),
+                    "loss": logs.get("loss", "N/A"),
+                    "grad_norm": logs.get("grad_norm", "N/A"),
+                    "learning_rate": logs.get("learning_rate", "N/A"),
+                }
+                logger.info(f"{loguru_metrics}")
+            
+            # Log to MLflow
+                for key, value in loguru_metrics.items():
+                    
+                    mlflow.log_metric(f"{key}", value, step=state.global_step)
+    
+    def on_epoch_end(self, args, state, control, **kwargs):
+        if control.should_evaluate:
+            control_copy = deepcopy(control)
+            
+            # Evaluate on the training dataset
+            train_metrics = self._trainer.evaluate(eval_dataset=self._trainer.train_dataset, metric_key_prefix="train")
+            # Evaluate on the evaluation dataset
+            eval_metrics = self._trainer.evaluate(eval_dataset=self._trainer.eval_dataset, metric_key_prefix="eval")
+            
+            # Combine and log metrics to Loguru
+            combined_metrics = {
+            "epoch": state.epoch,
+            "train_loss": train_metrics.get("train_loss", "N/A"),
+            "train_f1_macro": train_metrics.get("train_f1_macro", "N/A"),
+            "train_f1_micro": train_metrics.get("train_f1_micro", "N/A"),
+            "train_f1_weighted": train_metrics.get("train_f1_weighted", "N/A"),
+            "train_precision_macro": train_metrics.get("train_precision_macro", "N/A"),
+            "train_precision_micro": train_metrics.get("train_precision_micro", "N/A"),
+            "train_precision_weighted": train_metrics.get("train_precision_weighted", "N/A"),
+            "train_recall_macro": train_metrics.get("train_recall_macro", "N/A"),
+            "train_recall_micro": train_metrics.get("train_recall_micro", "N/A"),
+            "train_recall_weighted": train_metrics.get("train_recall_weighted", "N/A"),
+            "train_accuracy": train_metrics.get("train_accuracy", "N/A"),
+            "train_runtime": train_metrics.get("train_runtime", "N/A"),
+            "train_samples_per_second": train_metrics.get("train_samples_per_second", "N/A"),
+            "train_steps_per_second": train_metrics.get("train_steps_per_second", "N/A"),
+
+            "eval_loss": eval_metrics.get("eval_loss", "N/A"),
+            "eval_f1_macro": eval_metrics.get("eval_f1_macro", "N/A"),
+            "eval_f1_micro": eval_metrics.get("eval_f1_micro", "N/A"),
+            "eval_f1_weighted": eval_metrics.get("eval_f1_weighted", "N/A"),
+            "eval_precision_macro": eval_metrics.get("eval_precision_macro", "N/A"),
+            "eval_precision_micro": eval_metrics.get("eval_precision_micro", "N/A"),
+            "eval_precision_weighted": eval_metrics.get("eval_precision_weighted", "N/A"),
+            "eval_recall_macro": eval_metrics.get("eval_recall_macro", "N/A"),
+            "eval_recall_micro": eval_metrics.get("eval_recall_micro", "N/A"),
+            "eval_recall_weighted": eval_metrics.get("eval_recall_weighted", "N/A"),
+            "eval_accuracy": eval_metrics.get("eval_accuracy", "N/A"),
+            "eval_runtime": eval_metrics.get("eval_runtime", "N/A"),
+            "eval_samples_per_second": eval_metrics.get("eval_samples_per_second", "N/A"),
+            "eval_steps_per_second": eval_metrics.get("eval_steps_per_second", "N/A"),
+
+            "batch_size": args.per_device_train_batch_size,
+            "max_memory_allocated_GB": train_metrics.get("max_memory_allocated (GB)", "N/A"),
+        }
+
+            logger.info(f"{combined_metrics}")
+            
+            # Log metrics to MLflow
+            for key, value in train_metrics.items():
+                if key == 'memory_allocated (GB)':
+                    continue
+                elif key == 'total_memory_available (GB)':
+                    continue
+                elif key == 'max_memory_allocated (GB)': 
+                    key = 'max_memory_allocated_GB'
+                mlflow.log_metric(f"{key}", value, step=state.global_step)
+                
+            for key, value in eval_metrics.items():
+                if key == 'memory_allocated (GB)':
+                    continue
+                elif key == 'total_memory_available (GB)':
+                    continue
+                elif key == 'max_memory_allocated (GB)': 
+                    continue
+                mlflow.log_metric(f"{key}", value, step=state.global_step)
+                
+            return control_copy
+        else:
+            logger.info(f"Epoch {state.epoch} ended without evaluation.")
 
 
 if __name__ == "__main__":
