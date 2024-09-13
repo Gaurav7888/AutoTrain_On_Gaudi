@@ -96,25 +96,25 @@ export default function HomePage() {
             isSaved={isSaved}
           />
         );
-      // case 4:
-      //   return (
-      //     <>
-      //       <Box
-      // sx={{
-      //   dispaly: "flex",
-      //   flexDirection: "row",
-      //   // width: "100vw",
-      // }}
-      //       >
-      //         <Logs
-      //           hostingServerType={projectData.hostingServerType}
-      //           projectData={projectData}
-      //         />
-      //         <Dashboard url="http://g2-r2-2.iind.intel.com:30091/d/adw5vgtarwn40b/tgi-dashboard?orgId=1" />
-      //       </Box>
-      //     </>
-      //   );
       case 4:
+        return (
+          <>
+            <Box
+      sx={{
+        dispaly: "flex",
+        flexDirection: "row",
+        // width: "100vw",
+      }}
+            >
+              <Logs
+                hostingServerType={projectData.hostingServerType}
+                projectData={projectData}
+              />
+              <Dashboard url="http://g2-r2-2.iind.intel.com:30091/d/adw5vgtarwn40b/tgi-dashboard?orgId=1" />
+            </Box>
+          </>
+        );
+      case 5:
         return (
           <>
             <Box
