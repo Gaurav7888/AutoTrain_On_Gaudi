@@ -1,4 +1,5 @@
 import collections
+from pprint import pprint
 
 from huggingface_hub import list_models
 
@@ -11,44 +12,45 @@ def get_sorted_models(hub_models):
 
 
 def _fetch_text_classification_models():
-    hub_models1 = list(
-        list_models(
-            task="fill-mask",
-            library="transformers",
-            sort="downloads",
-            direction=-1,
-            limit=100,
-            full=False,
-        )
-    )
-    hub_models2 = list(
-        list_models(
-            task="text-classification",
-            library="transformers",
-            sort="downloads",
-            direction=-1,
-            limit=100,
-            full=False,
-        )
-    )
-    hub_models = list(hub_models1) + list(hub_models2)
-    hub_models = get_sorted_models(hub_models)
+    # hub_models1 = list(
+    #     list_models(
+    #         task="fill-mask",
+    #         library="transformers",
+    #         sort="downloads",
+    #         direction=-1,
+    #         limit=100,
+    #         full=False,
+    #     )
+    # )
+    # hub_models2 = list(
+    #     list_models(
+    #         task="text-classification",
+    #         library="transformers",
+    #         sort="downloads",
+    #         direction=-1,
+    #         limit=100,
+    #         full=False,
+    #     )
+    # )
+    # hub_models = list(hub_models1) + list(hub_models2)
+    # hub_models = get_sorted_models(hub_models)
 
-    trending_models = list(
-        list_models(
-            task="fill-mask",
-            library="transformers",
-            sort="likes7d",
-            direction=-1,
-            limit=30,
-            full=False,
-        )
-    )
-    if len(trending_models) > 0:
-        trending_models = get_sorted_models(trending_models)
-        hub_models = [m for m in hub_models if m not in trending_models]
-        hub_models = trending_models + hub_models
+    # trending_models = list(
+    #     list_models(
+    #         task="fill-mask",
+    #         library="transformers",
+    #         sort="likes7d",
+    #         direction=-1,
+    #         limit=30,
+    #         full=False,
+    #     )
+    # )
+    # if len(trending_models) > 0:
+    #     trending_models = get_sorted_models(trending_models)
+    #     hub_models = [m for m in hub_models if m not in trending_models]
+    #     hub_models = trending_models + hub_models
 
+    hub_models = ['meta-llama/LlamaGuard-7b', 'bert-large-uncased-whole-word-masking', 'google-bert/bert-base-uncased']
     return hub_models
 
 

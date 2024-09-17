@@ -50,10 +50,10 @@ pip:
 	twine upload dist/* --verbose --repository autotrain-advanced
 
 server:
-	uvicorn src.autotrain.app.app:app --port 8000 --reload --workers 4 --host 0.0.0.0
+	export HF_TOKEN=${HF_TOKEN} && uvicorn src.autotrain.app.app:app --port 8000 --reload --workers 4 --host 0.0.0.0
 
 ui:
-	cd ui && npm run dev
+	cd ui && npm i && npm run dev
 
 app:
-	autotrain app --port 8002 --host 0.0.0.0
+	export HF_TOKEN=${HF_TOKEN} && autotrain app --port 8000 --host 0.0.0.0

@@ -80,10 +80,9 @@ task_to_keys = {
     "wnli": ("sentence1", "sentence2"),
 }
 
-
 def parse_args():
-    # get training_config.json from the end user
     parser = argparse.ArgumentParser()
+    parser.add_argument("--training_config", type=str, required=True)
     return parser.parse_args()
 
 @dataclass
@@ -95,6 +94,11 @@ class DataTrainingArguments:
     into argparse arguments to be able to specify them on
     the command line.
     """
+
+    project_name: Optional[str] = field(
+        default="None",
+        metadata={},
+    )
 
     task_name: Optional[str] = field(
         default=None,
@@ -280,7 +284,7 @@ ml_path = os.path.join(root_path,"mlruns")
 mlflow.set_tracking_uri(ml_path)
 mlflow.set_experiment("text classification")
 
-@monitor
+# @monitor
 def train(config):
     with mlflow.start_run() as run:
         path = os.path.join(root_path,'model_metrics.log')
@@ -431,12 +435,10 @@ def train(config):
         #     ddp_find_unused_parameters=False,
         # )
 
-        if model_args.mixed_precision == "fp16":
-            pass
-            # training_args["fp16"] = True
-        if model_args.mixed_precision == "bf16":
-            pass
-            # training_args["bf16"] = True
+        # if model_args.mixed_precision == "fp16":
+        #     training_args["fp16"] = True
+        # if model_args.mixed_precision == "bf16":
+        #     training_args["bf16"] = True
 
         # if data_args.valid_split is not None:
         #     early_stop = EarlyStoppingCallback(
@@ -807,13 +809,7 @@ class UnifiedLoggingCallback(TrainerCallback):
             return control_copy
         else:
             logger.info(f"Epoch {state.epoch} ended without evaluation.")
-            
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--training_config", type=str, required=True, help="Path to the training configuration JSON file.")
-    return parser.parse_args()
-
-
+          
 
 if __name__ == "__main__":
     args = parse_args()

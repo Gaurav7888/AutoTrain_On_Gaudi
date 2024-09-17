@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import signal
@@ -12,6 +13,7 @@ from pydantic import BaseModel
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
+from sse_starlette.sse import EventSourceResponse
 #from nvitop import Device
 
 from autotrain import __version__, logger
@@ -815,7 +817,6 @@ def process_project_creation(
 @ui_router.get("/get_markdown", response_class=PlainTextResponse)
 async def fetch_script():
     markdown_path = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "markdown.md"))
-    print("\n\nMarkdown Path: ", markdown_path)
     if not os.path.isfile(markdown_path):
         raise HTTPException(status_code=404, detail="Markdown file not found")
 
@@ -837,21 +838,26 @@ async def handle_form(
     """
     project_info = process_project_creation(payload, token)
     params = project_info["params"]
+    task = project_info["task"].replace("-", "_")
 
     command = launch_command(params, ".")
     command = ' '.join(command)
 
-    task = project_info["task"].replace("-", "_")
-
-    script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
+    if (task == "llm:sft"):
+        script_path = os.path.join(TRAINERS_DIR, "clm/sft", "train_clm_sft.py")
+    else:
+        script_path = os.path.join(TRAINERS_DIR, task, "__main__.py")
     extract_function_name = 'train'
 
     # Load the script as a module
     spec = None
     if os.path.isfile(script_path):
+        print("script_path --------> ", script_path)
         import importlib.util
         spec = importlib.util.spec_from_file_location("module.name", script_path)
+        print("spec ------> ", spec)
         module = importlib.util.module_from_spec(spec)
+        print("module ------> ", module)
         spec.loader.exec_module(module)
 
     # Extract the function source code
@@ -859,6 +865,10 @@ async def handle_form(
         function = getattr(module, extract_function_name)
         function_source = inspect.getsource(function)
 
+        print("extract_function_name ------> ",extract_function_name)
+        print("module ------> ", module)
+        print("function ------> ", function)
+        print("function_source ------> ", function_source)
         markdown_path = 'markdown.md'
         
         # Save the function in a markdown file
@@ -944,6 +954,25 @@ async def is_model_training(authenticated: bool = Depends(user_authentication)):
         return {"model_training": True, "pids": running_jobs}
     return {"model_training": False, "pids": []}
 
+async def stream_logs_from_file():
+    log_file_path = "autotrain.log"
+    
+    try:
+        with open(log_file_path, "r") as log_file:
+            log_file.seek(0, 2)  # Move the cursor to the end of the file
+            while True:
+                line = log_file.readline()
+                if not line:
+                    await asyncio.sleep(0.1)  # Small delay before trying to read the next line
+                    continue
+                yield line.strip()
+    except Exception as error:
+        yield f"Error reading log file: {error}"
+
+@ui_router.get('/stream_logs')
+async def get_workload_logs(request: Request):
+    event_generator = stream_logs_from_file()
+    return EventSourceResponse(event_generator)
 
 @ui_router.get("/logs", response_class=JSONResponse)
 async def fetch_logs(authenticated: bool = Depends(user_authentication)):

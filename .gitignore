@@ -142,6 +142,18 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+
 # Next
 .next
 node_modules
+# run logs
+src/autotrain/trainers/*/runs/
+src/autotrain/trainers/*/checkpoint-*/
+src/autotrain/trainers/*/hl-smi_log.txt
+src/autotrain/trainers/*/.graph_dumps/
+
+#custom
+*.md
+!README.md
+mlruns
+hl-smi_log.txt

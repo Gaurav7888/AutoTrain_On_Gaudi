@@ -73,6 +73,17 @@ Run Autotrain App:
 ```bash
 make app
 ```
+
+Port mapping for Pod 32022
+```
+8000:32080, 3000:32030
+8002:32082, 3002:32032
+```
+
+Port mapping for Pod 31024
+```
+8000:31009, 3000:31003
+```
 ## Installation
 
 1. ```bash
