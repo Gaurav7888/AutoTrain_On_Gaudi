@@ -618,6 +618,8 @@ async def fetch_model_choices(
         hub_models = MODEL_CHOICE["image-object-detection"]
     elif task == "image-regression":
         hub_models = MODEL_CHOICE["image-regression"]
+    elif task == "audio-classification":
+        hub_models = MODEL_CHOICE["audio-classification"]
     else:
         raise NotImplementedError
 
@@ -839,6 +841,7 @@ async def handle_form(
     project_info = process_project_creation(payload, token)
     params = project_info["params"]
     task = project_info["task"].replace("-", "_")
+    print("\n\n\nTask: ",task)
 
     command = launch_command(params, ".")
     command = ' '.join(command)
