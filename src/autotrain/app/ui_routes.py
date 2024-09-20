@@ -855,9 +855,12 @@ async def handle_form(
     # Load the script as a module
     spec = None
     if os.path.isfile(script_path):
+        print("script_path --------> ", script_path)
         import importlib.util
         spec = importlib.util.spec_from_file_location("module.name", script_path)
+        print("spec ------> ", spec)
         module = importlib.util.module_from_spec(spec)
+        print("module ------> ", module)
         spec.loader.exec_module(module)
 
     # Extract the function source code
@@ -865,6 +868,10 @@ async def handle_form(
         function = getattr(module, extract_function_name)
         function_source = inspect.getsource(function)
 
+        print("extract_function_name ------> ",extract_function_name)
+        print("module ------> ", module)
+        print("function ------> ", function)
+        print("function_source ------> ", function_source)
         markdown_path = 'markdown.md'
         
         # Save the function in a markdown file

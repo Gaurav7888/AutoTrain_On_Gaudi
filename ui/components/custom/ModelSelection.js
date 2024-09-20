@@ -42,8 +42,8 @@ export default function ModelSelection({ projectData, onDataChange }) {
   return (
     <Box
       sx={{
-        width: "100%",
         height: "66vh",
+        width: "100%",
         overflowY: "auto",
         padding: 2,
         border: "1px solid #ccc",
@@ -59,7 +59,7 @@ export default function ModelSelection({ projectData, onDataChange }) {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              gap: "1rem",  
+              gap: "1rem",
             }}
           >
             <CircularProgress />

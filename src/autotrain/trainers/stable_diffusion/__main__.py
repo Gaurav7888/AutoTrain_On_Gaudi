@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright 2023 The HuggingFace Inc. team. All rights reserved.
@@ -695,865 +696,880 @@ def generate_timestep_weights(args, num_timesteps):
 
     return weights
 
+import mlflow
+import mlflow.pytorch
+import os
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+root_path = os.path.abspath(os.path.join(parent_dir, "..", "..", ".."))
+
+
+ml_path = os.path.join(root_path,"mlruns")
+mlflow.set_tracking_uri(ml_path)
+mlflow.set_experiment("stable diffusion")
 def main(args):
-    print(f"================= ARGS: {args} ===============")
-    print(args["gaudi_config_name"])
-    logging_dir = Path(args["output_dir"], args["logging_dir"])
+    with mlflow.start_run():
+        mlflow.log_params(args)
+        print(f"================= ARGS: {args} ===============")
+        print(args["gaudi_config_name"])
+        logging_dir = Path(args["output_dir"], args["logging_dir"])
 
-    accelerator_project_config = ProjectConfiguration(project_dir=args["output_dir"], logging_dir=logging_dir)
+        accelerator_project_config = ProjectConfiguration(project_dir=args["output_dir"], logging_dir=logging_dir)
 
-    gaudi_config = GaudiConfig.from_pretrained(args["gaudi_config_name"])
-    gaudi_config.use_torch_autocast = gaudi_config.use_torch_autocast or args["bf16"]
-    accelerator = GaudiAccelerator(
-        gradient_accumulation_steps=args["gradient_accumulation_steps"],
-        mixed_precision="bf16" if gaudi_config.use_torch_autocast else "no",
-        # log_with=args.report_to,
-        project_config=accelerator_project_config,
-        force_autocast=gaudi_config.use_torch_autocast,
-    )
-
-    # if args.report_to == "wandb":
-    #     if not is_wandb_available():
-    #         raise ImportError("Make sure to install wandb if you want to use it for logging during training.")
-    #     import wandb
-
-    # Make one log on every process with the configuration for debugging.
-    # logging.basicConfig(
-    #     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-    #     datefmt="%m/%d/%Y %H:%M:%S",
-    #     level=logging.INFO,
-    # )
-    # logger.info(accelerator.state, main_process_only=False)
-    # if accelerator.is_local_main_process:
-    #     datasets.utils.logging.set_verbosity_warning()
-    #     transformers.utils.logging.set_verbosity_warning()
-    #     diffusers.utils.logging.set_verbosity_info()
-    # else:
-    #     datasets.utils.logging.set_verbosity_error()
-    #     transformers.utils.logging.set_verbosity_error()
-    #     diffusers.utils.logging.set_verbosity_error()
-
-    # If passed along, set the training seed now.
-    if args["seed"] is not None:
-        set_seed(args["seed"])
-
-    # Handle the repository creation
-    if accelerator.is_main_process:
-        if args["output_dir"] is not None:
-            os.makedirs(args["output_dir"], exist_ok=True)
-
-        if args["push_to_hub"]:
-            repo_id = create_repo(
-                repo_id=args["hub_model_id"] or Path(args["output_dir"]).name,
-                exist_ok=True,
-                token=args["hub_token"],
-            ).repo_id
-
-    # Load the tokenizers
-    tokenizer_one = AutoTokenizer.from_pretrained(
-        args["pretrained_model_name_or_path"],
-        subfolder="tokenizer",
-        revision=args["revision"],
-        use_fast=False,
-    )
-    tokenizer_two = AutoTokenizer.from_pretrained(
-        args["pretrained_model_name_or_path"],
-        subfolder="tokenizer_2",
-        revision=args["revision"],
-        use_fast=False,
-    )
-
-    # import correct text encoder classes
-    text_encoder_cls_one = import_model_class_from_model_name_or_path(
-        args["pretrained_model_name_or_path"], args["revision"]
-    )
-    text_encoder_cls_two = import_model_class_from_model_name_or_path(
-        args["pretrained_model_name_or_path"], args["revision"], subfolder="text_encoder_2"
-    )
-
-    # Load scheduler and models
-    noise_scheduler = DDPMScheduler.from_pretrained(args["pretrained_model_name_or_path"], subfolder="scheduler")
-
-    # Check for terminal SNR in combination with SNR Gamma
-    text_encoder_one = text_encoder_cls_one.from_pretrained(
-        args["pretrained_model_name_or_path"],
-        subfolder="text_encoder",
-        revision=args["revision"],
-        variant=args["variant"],
-    ).to(accelerator.device)
-    text_encoder_two = text_encoder_cls_two.from_pretrained(
-        args["pretrained_model_name_or_path"],
-        subfolder="text_encoder_2",
-        revision=args["revision"],
-        variant=args["variant"],
-    ).to(accelerator.device)
-
-    # For mixed precision training we cast all non-trainable weigths to half-precision
-    # as these weights are only used for inference, keeping weights in full precision is not required.
-    weight_dtype = torch.float32
-    if gaudi_config.use_torch_autocast:
-        weight_dtype = torch.bfloat16
-
-    vae_path = (
-        args["pretrained_model_name_or_path"]
-        if args["pretrained_vae_model_name_or_path"] is None
-        else args["pretrained_vae_model_name_or_path"]
-    )
-
-    vae = AutoencoderKL.from_pretrained(
-        vae_path,
-        subfolder="vae" if args["pretrained_vae_model_name_or_path"] is None else None,
-        revision=args["revision"],
-        variant=args["variant"],
-    )
-    unet = UNet2DConditionModel.from_pretrained(
-        args["pretrained_model_name_or_path"],
-        subfolder="unet",
-        revision=args["revision"],
-        variant=args["variant"],
-        torch_dtype=weight_dtype,
-    )
-
-    # Freeze vae and text encoders.
-    vae.requires_grad_(False)
-    text_encoder_one.requires_grad_(False)
-    text_encoder_two.requires_grad_(False)
-    # Set unet as trainable.
-    unet.train()
-    if args["scale_lr"]:
-        args["learning_rate"] = (
-            args["learning_rate"] * args["gradient_accumulation_steps"] * args["train_batch_size"] * accelerator.num_processes
+        gaudi_config = GaudiConfig.from_pretrained(args["gaudi_config_name"])
+        gaudi_config.use_torch_autocast = gaudi_config.use_torch_autocast or args["bf16"]
+        accelerator = GaudiAccelerator(
+            gradient_accumulation_steps=args["gradient_accumulation_steps"],
+            mixed_precision="bf16" if gaudi_config.use_torch_autocast else "no",
+            # log_with=args.report_to,
+            project_config=accelerator_project_config,
+            force_autocast=gaudi_config.use_torch_autocast,
         )
 
-    # Initialize the optimizer
-    if gaudi_config.use_fused_adam:
-        from habana_frameworks.torch.hpex.optimizers import FusedAdamW
+        # if args.report_to == "wandb":
+        #     if not is_wandb_available():
+        #         raise ImportError("Make sure to install wandb if you want to use it for logging during training.")
+        #     import wandb
 
-        optimizer_class = FusedAdamW
-    else:
-        optimizer_class = torch.optim.AdamW
+        # Make one log on every process with the configuration for debugging.
+        # logging.basicConfig(
+        #     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        #     datefmt="%m/%d/%Y %H:%M:%S",
+        #     level=logging.INFO,
+        # )
+        # logger.info(accelerator.state, main_process_only=False)
+        # if accelerator.is_local_main_process:
+        #     datasets.utils.logging.set_verbosity_warning()
+        #     transformers.utils.logging.set_verbosity_warning()
+        #     diffusers.utils.logging.set_verbosity_info()
+        # else:
+        #     datasets.utils.logging.set_verbosity_error()
+        #     transformers.utils.logging.set_verbosity_error()
+        #     diffusers.utils.logging.set_verbosity_error()
 
-    if gaudi_config.use_fused_clip_norm:
-        from habana_frameworks.torch.hpex.normalization import FusedClipNorm
+        # If passed along, set the training seed now.
+        if args["seed"] is not None:
+            set_seed(args["seed"])
 
-        fused_clip_norm = FusedClipNorm(unet.parameters(), args["max_grad_norm"])
+        # Handle the repository creation
+        if accelerator.is_main_process:
+            if args["output_dir"] is not None:
+                os.makedirs(args["output_dir"], exist_ok=True)
 
-    # Optimizer creation
-    params_to_optimize = unet.parameters()
-    optimizer = optimizer_class(
-        params_to_optimize,
-        lr=args["learning_rate"],
-        betas=(args["adam_beta1"], args["adam_beta2"]),
-        weight_decay=args["adam_weight_decay"],
-        eps=args["adam_epsilon"],
-    )
+            if args["push_to_hub"]:
+                repo_id = create_repo(
+                    repo_id=args["hub_model_id"] or Path(args["output_dir"]).name,
+                    exist_ok=True,
+                    token=args["hub_token"],
+                ).repo_id
 
-    # Get the datasets: you can either provide your own training and evaluation files (see below)
-    # or specify a Dataset from the hub (the dataset will be downloaded automatically from the datasets Hub).
-
-    # In distributed training, the load_dataset function guarantees that only one local process can concurrently
-    # download the dataset.
-    if args["dataset_name"] is not None:
-        if len(args["mediapipe"]) > 0:
-            # assert (
-            #     args["resolution"] == args["crop_resolution"]
-            # ), f"To use hardware pipe, --resolution ({args["resolution"]}) must equal --crop_resolution ({args["crop_resolution"]})"
-            if args["local_rank"] == 0:
-                if not os.path.exists(args["mediapipe"]):
-                    os.mkdir(args["mediapipe"])
-                if len(os.listdir(args["mediapipe"])) == 0:
-                    dataset = load_dataset(args["dataset_name"], None)
-                    with open(f"{args['mediapipe']}/label.txt", "w") as f:
-                        for idx, dt in enumerate(dataset["train"]):
-                            dt["image"].save(f"{args['mediapipe']}/{idx}.jpg")
-                            f.write(dt["text"] + "\n")
-            if accelerator.distributed_type != GaudiDistributedType.NO:
-                torch.distributed.barrier()
-
-            from media_pipe_imgdir import get_dataset_for_pipeline
-
-            dt = get_dataset_for_pipeline(args["mediapipe"])
-            dataset = {"train": dt}
-        else:
-            # Downloading and loading a dataset from the hub.
-            dataset = load_dataset(
-                args["dataset_name"],
-                args["dataset_config_name"],
-                cache_dir=args["cache_dir"],
-                token=True
-            )
-    else:
-        data_files = {}
-        if args["train_data_dir"] is not None:
-            data_files["train"] = os.path.join(args["train_data_dir"], "**")
-        dataset = load_dataset(
-            "imagefolder",
-            data_files=data_files,
-            cache_dir=args["cache_dir"],
-        )
-        # See more about loading custom images at
-        # https://huggingface.co/docs/datasets/v2.4.0/en/image_load#imagefolder
-
-    # Preprocessing the datasets.
-    # We need to tokenize inputs and targets.
-    column_names = dataset["train"].column_names
-
-    # 6. Get the column names for input/target.
-    dataset_columns = DATASET_NAME_MAPPING.get(args["dataset_name"], None)
-    if args["image_column"] is None:
-        image_column = dataset_columns[0] if dataset_columns is not None else column_names[0]
-    else:
-        image_column = args["image_column"]
-        if image_column not in column_names:
-            raise ValueError(
-                f"""--image_column' value '{args["image_column"]}' needs to be one of: {', '.join(column_names)}"""
-            )
-    if args["caption_column"] is None:
-        caption_column = dataset_columns[1] if dataset_columns is not None else column_names[1]
-    else:
-        caption_column = args["caption_column"]
-        if caption_column not in column_names:
-            raise ValueError(
-                f"""--caption_column' value '{args["caption_column"]}' needs to be one of: {', '.join(column_names)}"""
-            )
-
-    text_encoder_one = text_encoder_one.to(accelerator.device, dtype=weight_dtype)
-    text_encoder_two = text_encoder_two.to(accelerator.device, dtype=weight_dtype)
-    # Preprocessing the datasets.
-    train_resize = transforms.Resize(args["resolution"], interpolation=transforms.InterpolationMode.BILINEAR)
-    train_crop = transforms.CenterCrop(args["resolution"]) if args["center_crop"] else transforms.RandomCrop(args["resolution"])
-    train_flip = transforms.RandomHorizontalFlip(p=1.0)
-    train_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
-
-    vae = vae.to(accelerator.device, dtype=weight_dtype)
-    # Let's first compute all the embeddings so that we can free up the text encoders
-    # from memory. We will pre-compute the VAE encodings too.
-    text_encoders = [text_encoder_one, text_encoder_two]
-    tokenizers = [tokenizer_one, tokenizer_two]
-
-    def preprocess_train(examples):
-        images = [image.convert("RGB") for image in examples[image_column]]
-        # image aug
-        original_sizes = []
-        all_images = []
-        crop_top_lefts = []
-        for image in images:
-            original_sizes.append((image.height, image.width))
-            image = train_resize(image)
-            if args["crop_resolution"] < args["resolution"]:
-                if args["center_crop"]:
-                    y1 = max(0, int(round((image.height - args["resolution"]) / 2.0)))
-                    x1 = max(0, int(round((image.width - args["resolution"]) / 2.0)))
-                    image = train_crop(image)
-                else:
-                    y1, x1, h, w = train_crop.get_params(image, (args["resolution"], args["resolution"]))
-                    image = crop(image, y1, x1, h, w)
-            else:
-                x1 = 0
-                y1 = 0
-            if args["random_flip"] and random.random() < 0.5:
-                # flip
-                x1 = image.width - x1
-                image = train_flip(image)
-            crop_top_left = (y1, x1)
-            crop_top_lefts.append(crop_top_left)
-            image = train_transforms(image)
-            all_images.append(image)
-
-        examples["original_sizes"] = original_sizes
-        examples["crop_top_lefts"] = crop_top_lefts
-        examples["pixel_values"] = all_images
-        return examples
-
-    with accelerator.main_process_first():
-        if args["max_train_samples"] is not None:
-            dataset["train"] = dataset["train"].shuffle(seed=args["seed"]).select(range(args["max_train_samples"]))
-        train_dataset = dataset["train"]
-        if len(args["mediapipe"]) == 0:
-            # Set the training transforms
-            train_dataset = train_dataset.with_transform(preprocess_train)
-
-    compute_embeddings_fn = functools.partial(
-        encode_prompt,
-        text_encoders=text_encoders,
-        tokenizers=tokenizers,
-        proportion_empty_prompts=args["proportion_empty_prompts"],
-        caption_column=args["caption_column"],
-    )
-
-    # TODO : adding crop = (0,0) for now.
-    # If we do random crop, we have to do this in mediapipe
-    def attach_metadata(batch):
-        import imagesize
-
-        return {
-            "original_sizes": imagesize.get(batch["image"]),
-            "crop_top_lefts": (0, 0),
-        }
-
-    with accelerator.main_process_first():
-        from datasets.fingerprint import Hasher
-
-        # fingerprint used by the cache for the other processes to load the result
-        # details: https://github.com/huggingface/diffusers/pull/4038#discussion_r1266078401
-        new_fingerprint = Hasher.hash(args)
-        train_dataset = train_dataset.map(compute_embeddings_fn, batched=True, new_fingerprint=new_fingerprint)
-        if len(args["mediapipe"]) > 0:
-            train_dataset = train_dataset.map(attach_metadata, load_from_cache_file=False)
-
-    def collate_fn(examples):
-        pixel_values = torch.stack([example["pixel_values"].clone().detach() for example in examples])
-        original_sizes = [example["original_sizes"] for example in examples]
-        crop_top_lefts = [example["crop_top_lefts"] for example in examples]
-        prompt_embeds = torch.stack([torch.tensor(example["prompt_embeds"]) for example in examples])
-        pooled_prompt_embeds = torch.stack([torch.tensor(example["pooled_prompt_embeds"]) for example in examples])
-
-        return {
-            "pixel_values": pixel_values,
-            "prompt_embeds": prompt_embeds,
-            "pooled_prompt_embeds": pooled_prompt_embeds,
-            "original_sizes": original_sizes,
-            "crop_top_lefts": crop_top_lefts,
-        }
-
-    # DataLoaders creation:
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset,
-        shuffle=True,
-        collate_fn=collate_fn,
-        batch_size=args["train_batch_size"],
-        num_workers=args["dataloader_num_workers"],
-    )
-
-    del text_encoders, tokenizers
-    gc.collect()
-    # Create EMA for the unet.
-    if args["use_ema"]:
-        ema_unet = UNet2DConditionModel.from_pretrained(
+        # Load the tokenizers
+        tokenizer_one = AutoTokenizer.from_pretrained(
             args["pretrained_model_name_or_path"],
-            subfolder="unet",
+            subfolder="tokenizer",
+            revision=args["revision"],
+            use_fast=False,
+        )
+        tokenizer_two = AutoTokenizer.from_pretrained(
+            args["pretrained_model_name_or_path"],
+            subfolder="tokenizer_2",
+            revision=args["revision"],
+            use_fast=False,
+        )
+
+        # import correct text encoder classes
+        text_encoder_cls_one = import_model_class_from_model_name_or_path(
+            args["pretrained_model_name_or_path"], args["revision"]
+        )
+        text_encoder_cls_two = import_model_class_from_model_name_or_path(
+            args["pretrained_model_name_or_path"], args["revision"], subfolder="text_encoder_2"
+        )
+
+        # Load scheduler and models
+        noise_scheduler = DDPMScheduler.from_pretrained(args["pretrained_model_name_or_path"], subfolder="scheduler")
+
+        # Check for terminal SNR in combination with SNR Gamma
+        text_encoder_one = text_encoder_cls_one.from_pretrained(
+            args["pretrained_model_name_or_path"],
+            subfolder="text_encoder",
             revision=args["revision"],
             variant=args["variant"],
+        ).to(accelerator.device)
+        text_encoder_two = text_encoder_cls_two.from_pretrained(
+            args["pretrained_model_name_or_path"],
+            subfolder="text_encoder_2",
+            revision=args["revision"],
+            variant=args["variant"],
+        ).to(accelerator.device)
+
+        # For mixed precision training we cast all non-trainable weigths to half-precision
+        # as these weights are only used for inference, keeping weights in full precision is not required.
+        weight_dtype = torch.float32
+        if gaudi_config.use_torch_autocast:
+            weight_dtype = torch.bfloat16
+
+        vae_path = (
+            args["pretrained_model_name_or_path"]
+            if args["pretrained_vae_model_name_or_path"] is None
+            else args["pretrained_vae_model_name_or_path"]
         )
-        ema_unet = EMAModel(
-            ema_unet.parameters(),
-            model_cls=UNet2DConditionModel,
-            model_config=ema_unet.config,
-        )
 
-    # `accelerate` 0.16.0 will have better support for customized saving
-    if version.parse(accelerate.__version__) >= version.parse("0.16.0"):
-        # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
-        def save_model_hook(models, weights, output_dir):
-            if accelerator.is_main_process:
-                if args["use_ema"]:
-                    ema_unet.save_pretrained(os.path.join(output_dir, "unet_ema"))
-
-                for i, model in enumerate(models):
-                    model.save_pretrained(os.path.join(output_dir, "unet"))
-
-                    # make sure to pop weight so that corresponding model is not saved again
-                    weights.pop()
-
-        def load_model_hook(models, input_dir):
-            if args["use_ema"]:
-                load_model = EMAModel.from_pretrained(os.path.join(input_dir, "unet_ema"), UNet2DConditionModel)
-                ema_unet.load_state_dict(load_model.state_dict())
-                ema_unet.to(accelerator.device)
-                del load_model
-
-            for i in range(len(models)):
-                # pop models so that they are not loaded again
-                model = models.pop()
-
-                # load diffusers style into model
-                load_model = UNet2DConditionModel.from_pretrained(input_dir, subfolder="unet")
-                model.register_to_config(**load_model.config)
-
-                model.load_state_dict(load_model.state_dict())
-                del load_model
-
-        accelerator.register_save_state_pre_hook(save_model_hook)
-        accelerator.register_load_state_pre_hook(load_model_hook)
-
-    # Scheduler and math around the number of training steps.
-    overrode_max_train_steps = False
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args["gradient_accumulation_steps"])
-    if args["max_train_steps"] is None:
-        args["max_train_steps"] = args["num_train_epochs"] * num_update_steps_per_epoch
-        overrode_max_train_steps = True
-
-    lr_scheduler = get_scheduler(
-        args["lr_scheduler"],
-        optimizer=optimizer,
-        num_warmup_steps=args["lr_warmup_steps"] * args["gradient_accumulation_steps"],
-        num_training_steps=args["max_train_steps"] * args["gradient_accumulation_steps"],
-    )
-
-    unet = unet.to("hpu")
-    # Prepare everything with our `accelerator`.
-    unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
-        unet, optimizer, train_dataloader, lr_scheduler
-    )
-
-    if len(args["mediapipe"]) > 0:
-        dataloader_params = {
-            "batch_size": args["train_batch_size"],
-            "resolution": args["resolution"],
-        }
-        from media_pipe_imgdir import MediaApiDataLoader
-
-        train_dataloader = MediaApiDataLoader(train_dataset, **dataloader_params)
-
-    # We need to recalculate our total training steps as the size of the training dataloader may have changed.
-    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args["gradient_accumulation_steps"])
-    if overrode_max_train_steps:
-        args["max_train_steps"] = args["num_train_epochs"] * num_update_steps_per_epoch
-    # Afterwards we recalculate our number of training epochs
-    args["num_train_epochs"] = math.ceil(args["max_train_steps"] / num_update_steps_per_epoch)
-    # We need to initialize the trackers we use, and also store our configuration.
-    # The trackers initializes automatically on the main process.
-    # if accelerator.is_main_process:
-    #     accelerator.init_trackers("text2image-fine-tune-sdxl", config=vars(args))
-
-    def unwrap_model(model, training=False):
-        model = accelerator.unwrap_model(model)
-        model = model._orig_mod if is_compiled_module(model) else model
-        if not training:
-            return model
-        else:
-            if accelerator.distributed_type == GaudiDistributedType.MULTI_HPU:
-                kwargs = {}
-                kwargs["gradient_as_bucket_view"] = True
-                accelerator.ddp_handler = DistributedDataParallelKwargs(**kwargs)
-            if args["use_hpu_graphs_for_training"]:
-                htcore.hpu.ModuleCacher()(model=model, inplace=True)
-
-    unwrap_model(model=unet, training=True)
-    # hb_profiler = HabanaProfile(
-    #     warmup=args["profiling_warmup_steps"],
-    #     active=args["profiling_steps"],
-    #     record_shapes=False,
-    # )
-    # Train!
-    total_batch_size = args["train_batch_size"] * accelerator.num_processes * args["gradient_accumulation_steps"]
-
-    # logger.info("***** Running training *****")
-    # logger.info(f"  Num examples = {len(train_dataset)}")
-    # logger.info(f"  Num Epochs = {args["num_train_epochs"]}")
-    # logger.info(f"  Instantaneous batch size per device = {args["train_batch_size"]}")
-    # logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
-    # logger.info(f"  Gradient Accumulation steps = {args["gradient_accumulation_steps"]}")
-    # logger.info(f"  Total optimization steps = {args["max_train_steps"]}")
-    global_step = 0
-    first_epoch = 0
-
-    # Potentially load in the weights and states from a previous save
-    if args["resume_from_checkpoint"]:
-        if args["resume_from_checkpoint"] != "latest":
-            path = os.path.basename(args["resume_from_checkpoint"])
-        else:
-            # Get the most recent checkpoint
-            dirs = os.listdir(args["output_dir"])
-            dirs = [d for d in dirs if d.startswith("checkpoint")]
-            dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
-            path = dirs[-1] if len(dirs) > 0 else None
-
-        if path is None:
-            accelerator.print(
-                f"""Checkpoint '{args["resume_from_checkpoint"]}' does not exist. Starting a new training run."""
-            )
-            args["resume_from_checkpoint"] = None
-            initial_global_step = 0
-        else:
-            accelerator.print(f"Resuming from checkpoint {path}")
-            accelerator.load_state(os.path.join(args["output_dir"], path))
-            global_step = int(path.split("-")[1])
-
-            initial_global_step = global_step
-            first_epoch = global_step // num_update_steps_per_epoch
-
-    else:
-        initial_global_step = 0
-
-    progress_bar = tqdm(
-        range(0, args["max_train_steps"]),
-        initial=initial_global_step,
-        desc="Steps",
-        # Only show the progress bar once on each machine.
-        disable=not accelerator.is_local_main_process,
-    )
-
-    t0 = None
-    t_start = time.perf_counter()
-    train_loss = torch.tensor(0, dtype=torch.float, device="hpu")
-    checkpoint_time = 0
-    for epoch in range(first_epoch, args["num_train_epochs"]):
-        train_loss.zero_()
-        # if hb_profiler:
-        #     hb_profiler.start()
-        for step, batch in enumerate(train_dataloader):
-            if t0 is None and global_step == args["throughput_warmup_steps"]:
-                t0 = time.perf_counter()
-            with accelerator.accumulate(unet):
-                # Move compute_vae_encoding here to reflect the transformed image input
-                model_input = compute_vae_encodings(batch["pixel_values"], vae)
-                # Sample noise that we'll add to the latents
-                noise = torch.randn_like(model_input)
-                if args["noise_offset"]:
-                    # https://www.crosslabs.org//blog/diffusion-with-offset-noise
-                    rand_device = model_input.device
-                    noise += args["noise_offset"] * torch.randn(
-                        (model_input.shape[0], model_input.shape[1], 1, 1),
-                        device=rand_device,
-                    )
-                noise = noise.to(model_input.device)
-
-                bsz = model_input.shape[0]
-
-                if args["timestep_bias_strategy"] == "none":
-                    # Sample a random timestep for each image without bias.
-                    timesteps = torch.randint(
-                        0,
-                        noise_scheduler.config.num_train_timesteps,
-                        (bsz,),
-                        device=model_input.device,
-                    )
-                    timesteps = timesteps.long()
-                else:
-                    # Sample a random timestep for each image, potentially biased by the timestep weights.
-                    # Biasing the timestep weights allows us to spend less time training irrelevant timesteps.
-                    weights = generate_timestep_weights(args, noise_scheduler.config.num_train_timesteps).to(
-                        model_input.device
-                    )
-                    timesteps = torch.multinomial(weights, bsz, replacement=True).long()
-
-                # Add noise to the model input according to the noise magnitude at each timestep
-                # (this is the forward diffusion process)
-                noisy_model_input = noise_scheduler.add_noise(model_input, noise, timesteps)
-
-                # time ids
-                def compute_time_ids(original_size, crops_coords_top_left):
-                    # Adapted from pipeline.StableDiffusionXLPipeline._get_add_time_ids
-                    target_size = (args["resolution"], args["resolution"])
-                    if "torch.Tensor" in str(type(original_size)):
-                        add_time_ids = torch.cat(
-                            [
-                                original_size,
-                                crops_coords_top_left,
-                                torch.tensor(target_size, device=crops_coords_top_left.device),
-                            ]
-                        )
-                    else:
-                        add_time_ids = list(original_size + crops_coords_top_left + target_size)
-                        add_time_ids = torch.tensor([add_time_ids])
-                    add_time_ids = add_time_ids.to(accelerator.device, dtype=weight_dtype)
-                    return add_time_ids
-
-                add_time_ids = torch.cat(
-                    [compute_time_ids(s, c) for s, c in zip(batch["original_sizes"], batch["crop_top_lefts"])]
-                )
-                # Predict the noise residual
-                unet_added_conditions = {"time_ids": add_time_ids}
-                prompt_embeds = batch["prompt_embeds"].to(accelerator.device)
-                pooled_prompt_embeds = batch["pooled_prompt_embeds"].to(accelerator.device)
-                unet_added_conditions.update({"text_embeds": pooled_prompt_embeds})
-
-                model_pred = unet(
-                    noisy_model_input,
-                    timesteps,
-                    prompt_embeds,
-                    added_cond_kwargs=unet_added_conditions,
-                    return_dict=False,
-                )[0]
-
-                # Get the target for loss depending on the prediction type
-                if args["prediction_type"] is not None:
-                    # set prediction_type of scheduler if defined
-                    noise_scheduler.register_to_config(prediction_type=args["prediction_type"])
-
-                if noise_scheduler.config.prediction_type == "epsilon":
-                    target = noise
-                elif noise_scheduler.config.prediction_type == "v_prediction":
-                    target = noise_scheduler.get_velocity(model_input, noise, timesteps)
-                elif noise_scheduler.config.prediction_type == "sample":
-                    # We set the target to latents here, but the model_pred will return the noise sample prediction.
-                    target = model_input
-                    # We will have to subtract the noise residual from the prediction to get the target sample.
-                    model_pred = model_pred - noise
-                else:
-                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-
-                if args["snr_gamma"] is None:
-                    loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-                else:
-                    # Compute loss-weights as per Section 3.4 of https://arxiv.org/abs/2303.09556.
-                    # Since we predict the noise instead of x_0, the original formulation is slightly changed.
-                    # This is discussed in Section 4.2 of the same paper.
-                    snr = compute_snr(noise_scheduler, timesteps)
-                    if noise_scheduler.config.prediction_type == "v_prediction":
-                        # Velocity objective requires that we add one to SNR values before we divide by them.
-                        snr = snr + 1
-                    mse_loss_weights = (
-                        torch.stack([snr, args["snr_gamma"] * torch.ones_like(timesteps)], dim=1).min(dim=1)[0] / snr
-                    )
-
-                    loss = F.mse_loss(model_pred.float(), target.float(), reduction="none")
-                    loss = loss.mean(dim=list(range(1, len(loss.shape)))) * mse_loss_weights
-                    loss = loss.mean()
-
-                # Gather the losses across all processes for logging (if we use distributed training).
-                avg_loss = accelerator.gather(loss.repeat(args["train_batch_size"])).mean()
-                train_loss += avg_loss / args["gradient_accumulation_steps"]
-                # Backpropagate
-                # TODO: check why this cause bufferoverflow issue
-                # with torch.autocast(device_type="hpu", dtype=weight_dtype, enabled=True):
-                accelerator.backward(loss)
-                htcore.mark_step()
-
-                if accelerator.sync_gradients:
-                    params_to_clip = unet.parameters()
-                    if gaudi_config.use_fused_clip_norm:
-                        fused_clip_norm.clip_norm(params_to_clip)
-                    else:
-                        accelerator.clip_grad_norm_(params_to_clip, args["max_grad_norm"])
-
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad(set_to_none=True)
-                htcore.mark_step()
-                #hb_profiler.step()
-
-            # Checks if the accelerator has performed an optimization step behind the scenes
-            if accelerator.sync_gradients:
-                progress_bar.update(1)
-                global_step += 1
-
-                if accelerator.is_main_process:
-                    if args["checkpointing_steps"] is not None and global_step % args["checkpointing_steps"] == 0:
-                        t_chkpt_start = time.perf_counter()
-                        # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
-                        if args["checkpoints_total_limit"] is not None:
-                            checkpoints = os.listdir(args["output_dir"])
-                            checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
-                            checkpoints = sorted(checkpoints, key=lambda x: int(x.split("-")[1]))
-
-                            # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
-                            if len(checkpoints) >= args["checkpoints_total_limit"]:
-                                num_to_remove = len(checkpoints) - args["checkpoints_total_limit"] + 1
-                                removing_checkpoints = checkpoints[0:num_to_remove]
-
-                                logger.info(
-                                    f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
-                                )
-                                logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
-
-                                for removing_checkpoint in removing_checkpoints:
-                                    removing_checkpoint = os.path.join(args["output_dir"], removing_checkpoint)
-                                    shutil.rmtree(removing_checkpoint)
-
-                        save_path = os.path.join(args["output_dir"], f"checkpoint-{global_step}")
-                        accelerator.save_state(save_path)
-                        logger.info(f"Saved state to {save_path}")
-                        t_chkpt_end = time.perf_counter()
-                        checkpoint_time += t_chkpt_end - t_chkpt_start
-
-                if (global_step - 1) % args["logging_step"] == 0 or global_step == args["max_train_steps"]:
-                    train_loss_scalar = train_loss.item()
-                    accelerator.log({"train_loss": train_loss_scalar}, step=global_step)
-
-                    if args["gradient_accumulation_steps"] > 1:
-                        logs = {
-                            "step_loss": loss.item(),
-                            "lr": lr_scheduler.get_last_lr()[0],
-                            "mem_used": to_gb_rounded(htorch.hpu.memory_allocated()),
-                        }
-                    else:
-                        logs = {
-                            "step_loss": train_loss_scalar,
-                            "lr": lr_scheduler.get_last_lr()[0],
-                            "mem_used": to_gb_rounded(htorch.hpu.memory_allocated()),
-                        }
-                    progress_bar.set_postfix(**logs)
-                train_loss.zero_()
-
-            if global_step >= args["max_train_steps"]:
-                break
-
-        #hb_profiler.stop()
-        if accelerator.is_main_process:
-            if args["validation_prompt"] is not None and (epoch + 1) % args["validation_epochs"] == 0:
-                # logger.info(
-                #     f"""Running validation... \n Generating {args["num_validation_images"]} images with prompt:"""
-                #     f""" {args["validation_prompt"]}."""
-                # )
-                if args["use_ema"]:
-                    # Store the UNet parameters temporarily and load the EMA parameters to perform inference.
-                    ema_unet.store(unet.parameters())
-                    ema_unet.copy_to(unet.parameters())
-
-                # create pipeline
-                vae = AutoencoderKL.from_pretrained(
-                    vae_path,
-                    subfolder=("vae" if args["pretrained_vae_model_name_or_path"] is None else None),
-                    revision=args["revision"],
-                    variant=args["variant"],
-                )
-                pipeline = GaudiStableDiffusionXLPipeline.from_pretrained(
-                    args["pretrained_model_name_or_path"],
-                    vae=vae,
-                    unet=unwrap_model(unet),
-                    revision=args["revision"],
-                    variant=args["variant"],
-                    use_habana=True,
-                    use_hpu_graphs=args["use_hpu_graphs_for_inference"],
-                    gaudi_config=args["gaudi_config_name"],
-                )
-                if args["prediction_type"] is not None:
-                    scheduler_args = {"prediction_type": args["prediction_type"]}
-                    pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
-                pipeline.scheduler = GaudiEulerDiscreteScheduler.from_config(pipeline.scheduler.config)
-                pipeline = pipeline.to(accelerator.device)
-                pipeline.set_progress_bar_config(disable=True)
-
-                # run inference
-                generator = torch.Generator(device="cpu").manual_seed(args["seed"]) if args["seed"] else None
-                pipeline_args = {"prompt": args["validation_prompt"]}
-
-                with torch.autocast(
-                    device_type="hpu",
-                    dtype=torch.bfloat16,
-                    enabled=gaudi_config.use_torch_autocast,
-                ):
-                    images = [
-                        pipeline(**pipeline_args, generator=generator, num_inference_steps=25).images[0]
-                        for _ in range(args["num_validation_images"])
-                    ]
-
-                for tracker in accelerator.trackers:
-                    if tracker.name == "tensorboard":
-                        np_images = np.stack([np.asarray(img) for img in images])
-                        tracker.writer.add_images("validation", np_images, epoch, dataformats="NHWC")
-                    # if tracker.name == "wandb":
-                    #     tracker.log(
-                    #         {
-                    #             "validation": [
-                    #                 wandb.Image(image, caption=f"{i}: {args["validation_prompt"]}")
-                    #                 for i, image in enumerate(images)
-                    #             ]
-                    #         }
-                    #     )
-
-                del pipeline
-
-    if t0 is not None:
-        duration = time.perf_counter() - t0 - (checkpoint_time if args["adjust_throughput"] else 0)
-        ttt = time.perf_counter() - t_start
-        throughput = (args["max_train_steps"] - args["throughput_warmup_steps"]) * total_batch_size / duration
-
-        accelerator.wait_for_everyone()
-        if accelerator.is_main_process:
-            logger.info(f"Throughput = {throughput} samples/s")
-            logger.info(f"Train runtime = {duration} seconds")
-            logger.info(f"Total Train runtime = {ttt} seconds")
-            metrics = {
-                "train_samples_per_second": throughput,
-                "train_runtime": duration,
-            }
-            with open(f"{args['output_dir']}/speed_metrics.json", mode="w") as file:
-                json.dump(metrics, file)
-
-        unet = accelerator.unwrap_model(unet)
-        if args["use_ema"]:
-            ema_unet.copy_to(unet.parameters())
-
-        # Serialize pipeline.
         vae = AutoencoderKL.from_pretrained(
             vae_path,
             subfolder="vae" if args["pretrained_vae_model_name_or_path"] is None else None,
             revision=args["revision"],
             variant=args["variant"],
-            torch_dtype=weight_dtype,
         )
-        pipeline = GaudiStableDiffusionXLPipeline.from_pretrained(
+        unet = UNet2DConditionModel.from_pretrained(
             args["pretrained_model_name_or_path"],
-            unet=unet,
-            vae=vae,
+            subfolder="unet",
             revision=args["revision"],
             variant=args["variant"],
             torch_dtype=weight_dtype,
-            scheduler=noise_scheduler,
-            use_habana=True,
-            use_hpu_graphs=args["use_hpu_graphs_for_inference"],
-            gaudi_config=args["gaudi_config_name"],
         )
-        if args["prediction_type"] is not None:
-            scheduler_args = {"prediction_type": args["prediction_type"]}
-            pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
-        pipeline.save_pretrained(args["output_dir"])
 
-        # run inference
-        images = []
-        if args["validation_prompt"] and args["num_validation_images"] > 0:
-            pipeline = pipeline.to(accelerator.device)
-            generator = torch.Generator(device="cpu").manual_seed(args["seed"]) if args["seed"] else None
-            with torch.autocast(
-                device_type="hpu",
-                dtype=weight_dtype,
-                enabled=gaudi_config.use_torch_autocast,
-            ):
-                images = [
-                    pipeline(
-                        args["validation_prompt"],
-                        num_inference_steps=25,
-                        generator=generator,
-                    ).images[0]
-                    for _ in range(args["num_validation_images"])
-                ]
-            # Save images in the specified directory if not None and if they are in PIL format
-            if args["image_save_dir"] is not None:
-                if args["output_type"] == "pil":
-                    image_save_dir = Path(args["image_save_dir"])
-                    image_save_dir.mkdir(parents=True, exist_ok=True)
-                    logger.info(f"Saving images in {image_save_dir.resolve()}...")
-                    for i, image in enumerate(images):
-                        image.save(image_save_dir / f"image_{epoch}_{i+1}.png")
+        # Freeze vae and text encoders.
+        vae.requires_grad_(False)
+        text_encoder_one.requires_grad_(False)
+        text_encoder_two.requires_grad_(False)
+        # Set unet as trainable.
+        unet.train()
+        if args["scale_lr"]:
+            args["learning_rate"] = (
+                args["learning_rate"] * args["gradient_accumulation_steps"] * args["train_batch_size"] * accelerator.num_processes
+            )
+
+        # Initialize the optimizer
+        if gaudi_config.use_fused_adam:
+            from habana_frameworks.torch.hpex.optimizers import FusedAdamW
+
+            optimizer_class = FusedAdamW
+        else:
+            optimizer_class = torch.optim.AdamW
+
+        if gaudi_config.use_fused_clip_norm:
+            from habana_frameworks.torch.hpex.normalization import FusedClipNorm
+
+            fused_clip_norm = FusedClipNorm(unet.parameters(), args["max_grad_norm"])
+
+        # Optimizer creation
+        params_to_optimize = unet.parameters()
+        optimizer = optimizer_class(
+            params_to_optimize,
+            lr=args["learning_rate"],
+            betas=(args["adam_beta1"], args["adam_beta2"]),
+            weight_decay=args["adam_weight_decay"],
+            eps=args["adam_epsilon"],
+        )
+
+        # Get the datasets: you can either provide your own training and evaluation files (see below)
+        # or specify a Dataset from the hub (the dataset will be downloaded automatically from the datasets Hub).
+
+        # In distributed training, the load_dataset function guarantees that only one local process can concurrently
+        # download the dataset.
+        if args["dataset_name"] is not None:
+            if len(args["mediapipe"]) > 0:
+                # assert (
+                #     args["resolution"] == args["crop_resolution"]
+                # ), f"To use hardware pipe, --resolution ({args["resolution"]}) must equal --crop_resolution ({args["crop_resolution"]})"
+                if args["local_rank"] == 0:
+                    if not os.path.exists(args["mediapipe"]):
+                        os.mkdir(args["mediapipe"])
+                    if len(os.listdir(args["mediapipe"])) == 0:
+                        dataset = load_dataset(args["dataset_name"], None)
+                        with open(f"{args['mediapipe']}/label.txt", "w") as f:
+                            for idx, dt in enumerate(dataset["train"]):
+                                dt["image"].save(f"{args['mediapipe']}/{idx}.jpg")
+                                f.write(dt["text"] + "\n")
+                if accelerator.distributed_type != GaudiDistributedType.NO:
+                    torch.distributed.barrier()
+
+                from media_pipe_imgdir import get_dataset_for_pipeline
+
+                dt = get_dataset_for_pipeline(args["mediapipe"])
+                dataset = {"train": dt}
+            else:
+                # Downloading and loading a dataset from the hub.
+                dataset = load_dataset(
+                    args["dataset_name"],
+                    args["dataset_config_name"],
+                    cache_dir=args["cache_dir"],
+                    token=True
+                )
+        else:
+            data_files = {}
+            if args["train_data_dir"] is not None:
+                data_files["train"] = os.path.join(args["train_data_dir"], "**")
+            dataset = load_dataset(
+                "imagefolder",
+                data_files=data_files,
+                cache_dir=args["cache_dir"],
+            )
+            # See more about loading custom images at
+            # https://huggingface.co/docs/datasets/v2.4.0/en/image_load#imagefolder
+
+        # Preprocessing the datasets.
+        # We need to tokenize inputs and targets.
+        column_names = dataset["train"].column_names
+
+        # 6. Get the column names for input/target.
+        dataset_columns = DATASET_NAME_MAPPING.get(args["dataset_name"], None)
+        if args["image_column"] is None:
+            image_column = dataset_columns[0] if dataset_columns is not None else column_names[0]
+        else:
+            image_column = args["image_column"]
+            if image_column not in column_names:
+                raise ValueError(
+                    f"""--image_column' value '{args["image_column"]}' needs to be one of: {', '.join(column_names)}"""
+                )
+        if args["caption_column"] is None:
+            caption_column = dataset_columns[1] if dataset_columns is not None else column_names[1]
+        else:
+            caption_column = args["caption_column"]
+            if caption_column not in column_names:
+                raise ValueError(
+                    f"""--caption_column' value '{args["caption_column"]}' needs to be one of: {', '.join(column_names)}"""
+                )
+
+        text_encoder_one = text_encoder_one.to(accelerator.device, dtype=weight_dtype)
+        text_encoder_two = text_encoder_two.to(accelerator.device, dtype=weight_dtype)
+        # Preprocessing the datasets.
+        train_resize = transforms.Resize(args["resolution"], interpolation=transforms.InterpolationMode.BILINEAR)
+        train_crop = transforms.CenterCrop(args["resolution"]) if args["center_crop"] else transforms.RandomCrop(args["resolution"])
+        train_flip = transforms.RandomHorizontalFlip(p=1.0)
+        train_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
+
+        vae = vae.to(accelerator.device, dtype=weight_dtype)
+        # Let's first compute all the embeddings so that we can free up the text encoders
+        # from memory. We will pre-compute the VAE encodings too.
+        text_encoders = [text_encoder_one, text_encoder_two]
+        tokenizers = [tokenizer_one, tokenizer_two]
+
+        def preprocess_train(examples):
+            images = [image.convert("RGB") for image in examples[image_column]]
+            # image aug
+            original_sizes = []
+            all_images = []
+            crop_top_lefts = []
+            for image in images:
+                original_sizes.append((image.height, image.width))
+                image = train_resize(image)
+                if args["crop_resolution"] < args["resolution"]:
+                    if args["center_crop"]:
+                        y1 = max(0, int(round((image.height - args["resolution"]) / 2.0)))
+                        x1 = max(0, int(round((image.width - args["resolution"]) / 2.0)))
+                        image = train_crop(image)
+                    else:
+                        y1, x1, h, w = train_crop.get_params(image, (args["resolution"], args["resolution"]))
+                        image = crop(image, y1, x1, h, w)
                 else:
-                    logger.warning("--output_type should be equal to 'pil' to save images in --image_save_dir.")
+                    x1 = 0
+                    y1 = 0
+                if args["random_flip"] and random.random() < 0.5:
+                    # flip
+                    x1 = image.width - x1
+                    image = train_flip(image)
+                crop_top_left = (y1, x1)
+                crop_top_lefts.append(crop_top_left)
+                image = train_transforms(image)
+                all_images.append(image)
 
-            # for tracker in accelerator.trackers:
-            #     if tracker.name == "tensorboard":
-            #         np_images = np.stack([np.asarray(img) for img in images])
-            #         tracker.writer.add_images("test", np_images, epoch, dataformats="NHWC")
-            #     if tracker.name == "wandb":
-            #         tracker.log(
-            #             {
-            #                 "test": [
-            #                     wandb.Image(image, caption=f"{i}: {args["validation_prompt"]}")
-            #                     for i, image in enumerate(images)
-            #                 ]
-            #             }
-            #         )
+            examples["original_sizes"] = original_sizes
+            examples["crop_top_lefts"] = crop_top_lefts
+            examples["pixel_values"] = all_images
+            return examples
 
-        if args["push_to_hub"]:
-            save_model_card(
-                repo_id=repo_id,
-                images=images,
-                validation_prompt=args["validation_prompt"],
-                base_model=args["pretrained_model_name_or_path"],
-                dataset_name=args["dataset_name"],
-                repo_folder=args["output_dir"],
-                vae_path=args["pretrained_vae_model_name_or_path"],
+        with accelerator.main_process_first():
+            if args["max_train_samples"] is not None:
+                dataset["train"] = dataset["train"].shuffle(seed=args["seed"]).select(range(args["max_train_samples"]))
+            train_dataset = dataset["train"]
+            if len(args["mediapipe"]) == 0:
+                # Set the training transforms
+                train_dataset = train_dataset.with_transform(preprocess_train)
+
+        compute_embeddings_fn = functools.partial(
+            encode_prompt,
+            text_encoders=text_encoders,
+            tokenizers=tokenizers,
+            proportion_empty_prompts=args["proportion_empty_prompts"],
+            caption_column=args["caption_column"],
+        )
+
+        # TODO : adding crop = (0,0) for now.
+        # If we do random crop, we have to do this in mediapipe
+        def attach_metadata(batch):
+            import imagesize
+
+            return {
+                "original_sizes": imagesize.get(batch["image"]),
+                "crop_top_lefts": (0, 0),
+            }
+
+        with accelerator.main_process_first():
+            from datasets.fingerprint import Hasher
+
+            # fingerprint used by the cache for the other processes to load the result
+            # details: https://github.com/huggingface/diffusers/pull/4038#discussion_r1266078401
+            new_fingerprint = Hasher.hash(args)
+            train_dataset = train_dataset.map(compute_embeddings_fn, batched=True, new_fingerprint=new_fingerprint)
+            if len(args["mediapipe"]) > 0:
+                train_dataset = train_dataset.map(attach_metadata, load_from_cache_file=False)
+
+        def collate_fn(examples):
+            pixel_values = torch.stack([example["pixel_values"].clone().detach() for example in examples])
+            original_sizes = [example["original_sizes"] for example in examples]
+            crop_top_lefts = [example["crop_top_lefts"] for example in examples]
+            prompt_embeds = torch.stack([torch.tensor(example["prompt_embeds"]) for example in examples])
+            pooled_prompt_embeds = torch.stack([torch.tensor(example["pooled_prompt_embeds"]) for example in examples])
+
+            return {
+                "pixel_values": pixel_values,
+                "prompt_embeds": prompt_embeds,
+                "pooled_prompt_embeds": pooled_prompt_embeds,
+                "original_sizes": original_sizes,
+                "crop_top_lefts": crop_top_lefts,
+            }
+
+        # DataLoaders creation:
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset,
+            shuffle=True,
+            collate_fn=collate_fn,
+            batch_size=args["train_batch_size"],
+            num_workers=args["dataloader_num_workers"],
+        )
+
+        del text_encoders, tokenizers
+        gc.collect()
+        # Create EMA for the unet.
+        if args["use_ema"]:
+            ema_unet = UNet2DConditionModel.from_pretrained(
+                args["pretrained_model_name_or_path"],
+                subfolder="unet",
+                revision=args["revision"],
+                variant=args["variant"],
             )
-            upload_folder(
-                repo_id=repo_id,
-                folder_path=args["output_dir"],
-                commit_message="End of training",
-                ignore_patterns=["step_*", "epoch_*"],
+            ema_unet = EMAModel(
+                ema_unet.parameters(),
+                model_cls=UNet2DConditionModel,
+                model_config=ema_unet.config,
             )
 
-    accelerator.end_training()
+        # `accelerate` 0.16.0 will have better support for customized saving
+        if version.parse(accelerate.__version__) >= version.parse("0.16.0"):
+            # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
+            def save_model_hook(models, weights, output_dir):
+                if accelerator.is_main_process:
+                    if args["use_ema"]:
+                        ema_unet.save_pretrained(os.path.join(output_dir, "unet_ema"))
+
+                    for i, model in enumerate(models):
+                        model.save_pretrained(os.path.join(output_dir, "unet"))
+
+                        # make sure to pop weight so that corresponding model is not saved again
+                        weights.pop()
+
+            def load_model_hook(models, input_dir):
+                if args["use_ema"]:
+                    load_model = EMAModel.from_pretrained(os.path.join(input_dir, "unet_ema"), UNet2DConditionModel)
+                    ema_unet.load_state_dict(load_model.state_dict())
+                    ema_unet.to(accelerator.device)
+                    del load_model
+
+                for i in range(len(models)):
+                    # pop models so that they are not loaded again
+                    model = models.pop()
+
+                    # load diffusers style into model
+                    load_model = UNet2DConditionModel.from_pretrained(input_dir, subfolder="unet")
+                    model.register_to_config(**load_model.config)
+
+                    model.load_state_dict(load_model.state_dict())
+                    del load_model
+
+            accelerator.register_save_state_pre_hook(save_model_hook)
+            accelerator.register_load_state_pre_hook(load_model_hook)
+
+        # Scheduler and math around the number of training steps.
+        overrode_max_train_steps = False
+        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args["gradient_accumulation_steps"])
+        if args["max_train_steps"] is None:
+            args["max_train_steps"] = args["num_train_epochs"] * num_update_steps_per_epoch
+            overrode_max_train_steps = True
+
+        lr_scheduler = get_scheduler(
+            args["lr_scheduler"],
+            optimizer=optimizer,
+            num_warmup_steps=args["lr_warmup_steps"] * args["gradient_accumulation_steps"],
+            num_training_steps=args["max_train_steps"] * args["gradient_accumulation_steps"],
+        )
+
+        unet = unet.to("hpu")
+        # Prepare everything with our `accelerator`.
+        unet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
+            unet, optimizer, train_dataloader, lr_scheduler
+        )
+
+        if len(args["mediapipe"]) > 0:
+            dataloader_params = {
+                "batch_size": args["train_batch_size"],
+                "resolution": args["resolution"],
+            }
+            from media_pipe_imgdir import MediaApiDataLoader
+
+            train_dataloader = MediaApiDataLoader(train_dataset, **dataloader_params)
+
+        # We need to recalculate our total training steps as the size of the training dataloader may have changed.
+        num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args["gradient_accumulation_steps"])
+        if overrode_max_train_steps:
+            args["max_train_steps"] = args["num_train_epochs"] * num_update_steps_per_epoch
+        # Afterwards we recalculate our number of training epochs
+        args["num_train_epochs"] = math.ceil(args["max_train_steps"] / num_update_steps_per_epoch)
+        # We need to initialize the trackers we use, and also store our configuration.
+        # The trackers initializes automatically on the main process.
+        # if accelerator.is_main_process:
+        #     accelerator.init_trackers("text2image-fine-tune-sdxl", config=vars(args))
+
+        def unwrap_model(model, training=False):
+            model = accelerator.unwrap_model(model)
+            model = model._orig_mod if is_compiled_module(model) else model
+            if not training:
+                return model
+            else:
+                if accelerator.distributed_type == GaudiDistributedType.MULTI_HPU:
+                    kwargs = {}
+                    kwargs["gradient_as_bucket_view"] = True
+                    accelerator.ddp_handler = DistributedDataParallelKwargs(**kwargs)
+                if args["use_hpu_graphs_for_training"]:
+                    htcore.hpu.ModuleCacher()(model=model, inplace=True)
+
+        unwrap_model(model=unet, training=True)
+        # hb_profiler = HabanaProfile(
+        #     warmup=args["profiling_warmup_steps"],
+        #     active=args["profiling_steps"],
+        #     record_shapes=False,
+        # )
+        # Train!
+        total_batch_size = args["train_batch_size"] * accelerator.num_processes * args["gradient_accumulation_steps"]
+
+        # logger.info("***** Running training *****")
+        # logger.info(f"  Num examples = {len(train_dataset)}")
+        # logger.info(f"  Num Epochs = {args["num_train_epochs"]}")
+        # logger.info(f"  Instantaneous batch size per device = {args["train_batch_size"]}")
+        # logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+        # logger.info(f"  Gradient Accumulation steps = {args["gradient_accumulation_steps"]}")
+        # logger.info(f"  Total optimization steps = {args["max_train_steps"]}")
+        global_step = 0
+        first_epoch = 0
+
+        # Potentially load in the weights and states from a previous save
+        if args["resume_from_checkpoint"]:
+            if args["resume_from_checkpoint"] != "latest":
+                path = os.path.basename(args["resume_from_checkpoint"])
+            else:
+                # Get the most recent checkpoint
+                dirs = os.listdir(args["output_dir"])
+                dirs = [d for d in dirs if d.startswith("checkpoint")]
+                dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
+                path = dirs[-1] if len(dirs) > 0 else None
+
+            if path is None:
+                accelerator.print(
+                    f"""Checkpoint '{args["resume_from_checkpoint"]}' does not exist. Starting a new training run."""
+                )
+                args["resume_from_checkpoint"] = None
+                initial_global_step = 0
+            else:
+                accelerator.print(f"Resuming from checkpoint {path}")
+                accelerator.load_state(os.path.join(args["output_dir"], path))
+                global_step = int(path.split("-")[1])
+
+                initial_global_step = global_step
+                first_epoch = global_step // num_update_steps_per_epoch
+
+        else:
+            initial_global_step = 0
+
+        progress_bar = tqdm(
+            range(0, args["max_train_steps"]),
+            initial=initial_global_step,
+            desc="Steps",
+            # Only show the progress bar once on each machine.
+            disable=not accelerator.is_local_main_process,
+        )
+
+        t0 = None
+        t_start = time.perf_counter()
+        train_loss = torch.tensor(0, dtype=torch.float, device="hpu")
+        checkpoint_time = 0
+        for epoch in range(first_epoch, args["num_train_epochs"]):
+            train_loss.zero_()
+            # if hb_profiler:
+            #     hb_profiler.start()
+            for step, batch in enumerate(train_dataloader):
+                if t0 is None and global_step == args["throughput_warmup_steps"]:
+                    t0 = time.perf_counter()
+                with accelerator.accumulate(unet):
+                    # Move compute_vae_encoding here to reflect the transformed image input
+                    model_input = compute_vae_encodings(batch["pixel_values"], vae)
+                    # Sample noise that we'll add to the latents
+                    noise = torch.randn_like(model_input)
+                    if args["noise_offset"]:
+                        # https://www.crosslabs.org//blog/diffusion-with-offset-noise
+                        rand_device = model_input.device
+                        noise += args["noise_offset"] * torch.randn(
+                            (model_input.shape[0], model_input.shape[1], 1, 1),
+                            device=rand_device,
+                        )
+                    noise = noise.to(model_input.device)
+
+                    bsz = model_input.shape[0]
+
+                    if args["timestep_bias_strategy"] == "none":
+                        # Sample a random timestep for each image without bias.
+                        timesteps = torch.randint(
+                            0,
+                            noise_scheduler.config.num_train_timesteps,
+                            (bsz,),
+                            device=model_input.device,
+                        )
+                        timesteps = timesteps.long()
+                    else:
+                        # Sample a random timestep for each image, potentially biased by the timestep weights.
+                        # Biasing the timestep weights allows us to spend less time training irrelevant timesteps.
+                        weights = generate_timestep_weights(args, noise_scheduler.config.num_train_timesteps).to(
+                            model_input.device
+                        )
+                        timesteps = torch.multinomial(weights, bsz, replacement=True).long()
+
+                    # Add noise to the model input according to the noise magnitude at each timestep
+                    # (this is the forward diffusion process)
+                    noisy_model_input = noise_scheduler.add_noise(model_input, noise, timesteps)
+
+                    # time ids
+                    def compute_time_ids(original_size, crops_coords_top_left):
+                        # Adapted from pipeline.StableDiffusionXLPipeline._get_add_time_ids
+                        target_size = (args["resolution"], args["resolution"])
+                        if "torch.Tensor" in str(type(original_size)):
+                            add_time_ids = torch.cat(
+                                [
+                                    original_size,
+                                    crops_coords_top_left,
+                                    torch.tensor(target_size, device=crops_coords_top_left.device),
+                                ]
+                            )
+                        else:
+                            add_time_ids = list(original_size + crops_coords_top_left + target_size)
+                            add_time_ids = torch.tensor([add_time_ids])
+                        add_time_ids = add_time_ids.to(accelerator.device, dtype=weight_dtype)
+                        return add_time_ids
+
+                    add_time_ids = torch.cat(
+                        [compute_time_ids(s, c) for s, c in zip(batch["original_sizes"], batch["crop_top_lefts"])]
+                    )
+                    # Predict the noise residual
+                    unet_added_conditions = {"time_ids": add_time_ids}
+                    prompt_embeds = batch["prompt_embeds"].to(accelerator.device)
+                    pooled_prompt_embeds = batch["pooled_prompt_embeds"].to(accelerator.device)
+                    unet_added_conditions.update({"text_embeds": pooled_prompt_embeds})
+
+                    model_pred = unet(
+                        noisy_model_input,
+                        timesteps,
+                        prompt_embeds,
+                        added_cond_kwargs=unet_added_conditions,
+                        return_dict=False,
+                    )[0]
+
+                    # Get the target for loss depending on the prediction type
+                    if args["prediction_type"] is not None:
+                        # set prediction_type of scheduler if defined
+                        noise_scheduler.register_to_config(prediction_type=args["prediction_type"])
+
+                    if noise_scheduler.config.prediction_type == "epsilon":
+                        target = noise
+                    elif noise_scheduler.config.prediction_type == "v_prediction":
+                        target = noise_scheduler.get_velocity(model_input, noise, timesteps)
+                    elif noise_scheduler.config.prediction_type == "sample":
+                        # We set the target to latents here, but the model_pred will return the noise sample prediction.
+                        target = model_input
+                        # We will have to subtract the noise residual from the prediction to get the target sample.
+                        model_pred = model_pred - noise
+                    else:
+                        raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+
+                    if args["snr_gamma"] is None:
+                        loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                    else:
+                        # Compute loss-weights as per Section 3.4 of https://arxiv.org/abs/2303.09556.
+                        # Since we predict the noise instead of x_0, the original formulation is slightly changed.
+                        # This is discussed in Section 4.2 of the same paper.
+                        snr = compute_snr(noise_scheduler, timesteps)
+                        if noise_scheduler.config.prediction_type == "v_prediction":
+                            # Velocity objective requires that we add one to SNR values before we divide by them.
+                            snr = snr + 1
+                        mse_loss_weights = (
+                            torch.stack([snr, args["snr_gamma"] * torch.ones_like(timesteps)], dim=1).min(dim=1)[0] / snr
+                        )
+
+                        loss = F.mse_loss(model_pred.float(), target.float(), reduction="none")
+                        loss = loss.mean(dim=list(range(1, len(loss.shape)))) * mse_loss_weights
+                        loss = loss.mean()
+
+                    # Gather the losses across all processes for logging (if we use distributed training).
+                    avg_loss = accelerator.gather(loss.repeat(args["train_batch_size"])).mean()
+                    train_loss += avg_loss / args["gradient_accumulation_steps"]
+                    # Backpropagate
+                    # TODO: check why this cause bufferoverflow issue
+                    # with torch.autocast(device_type="hpu", dtype=weight_dtype, enabled=True):
+                    accelerator.backward(loss)
+                    htcore.mark_step()
+
+                    if accelerator.sync_gradients:
+                        params_to_clip = unet.parameters()
+                        if gaudi_config.use_fused_clip_norm:
+                            fused_clip_norm.clip_norm(params_to_clip)
+                        else:
+                            accelerator.clip_grad_norm_(params_to_clip, args["max_grad_norm"])
+
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad(set_to_none=True)
+                    htcore.mark_step()
+                    #hb_profiler.step()
+
+                # Checks if the accelerator has performed an optimization step behind the scenes
+                if accelerator.sync_gradients:
+                    progress_bar.update(1)
+                    global_step += 1
+
+                    if accelerator.is_main_process:
+                        if args["checkpointing_steps"] is not None and global_step % args["checkpointing_steps"] == 0:
+                            t_chkpt_start = time.perf_counter()
+                            # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
+                            if args["checkpoints_total_limit"] is not None:
+                                checkpoints = os.listdir(args["output_dir"])
+                                checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
+                                checkpoints = sorted(checkpoints, key=lambda x: int(x.split("-")[1]))
+
+                                # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
+                                if len(checkpoints) >= args["checkpoints_total_limit"]:
+                                    num_to_remove = len(checkpoints) - args["checkpoints_total_limit"] + 1
+                                    removing_checkpoints = checkpoints[0:num_to_remove]
+
+                                    logger.info(
+                                        f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
+                                    )
+                                    logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
+
+                                    for removing_checkpoint in removing_checkpoints:
+                                        removing_checkpoint = os.path.join(args["output_dir"], removing_checkpoint)
+                                        shutil.rmtree(removing_checkpoint)
+
+                            save_path = os.path.join(args["output_dir"], f"checkpoint-{global_step}")
+                            accelerator.save_state(save_path)
+                            logger.info(f"Saved state to {save_path}")
+                            t_chkpt_end = time.perf_counter()
+                            checkpoint_time += t_chkpt_end - t_chkpt_start
+
+                    if (global_step - 1) % args["logging_step"] == 0 or global_step == args["max_train_steps"]:
+                        train_loss_scalar = train_loss.item()
+                        accelerator.log({"train_loss": train_loss_scalar}, step=global_step)
+
+                        if args["gradient_accumulation_steps"] > 1:
+                            logs = {
+                                "step_loss": loss.item(),
+                                "lr": lr_scheduler.get_last_lr()[0],
+                                "mem_used": to_gb_rounded(htorch.hpu.memory_allocated()),
+                            }
+                        else:
+                            logs = {
+                                "step_loss": train_loss_scalar,
+                                "lr": lr_scheduler.get_last_lr()[0],
+                                "mem_used": to_gb_rounded(htorch.hpu.memory_allocated()),
+                            }
+                       
+                        mlflow.log_metrics(logs,step = epoch)
+                        progress_bar.set_postfix(**logs)
+                    train_loss.zero_()
+
+                if global_step >= args["max_train_steps"]:
+                    break
+
+            #hb_profiler.stop()
+            if accelerator.is_main_process:
+                if args["validation_prompt"] is not None and (epoch + 1) % args["validation_epochs"] == 0:
+                    # logger.info(
+                    #     f"""Running validation... \n Generating {args["num_validation_images"]} images with prompt:"""
+                    #     f""" {args["validation_prompt"]}."""
+                    # )
+                    if args["use_ema"]:
+                        # Store the UNet parameters temporarily and load the EMA parameters to perform inference.
+                        ema_unet.store(unet.parameters())
+                        ema_unet.copy_to(unet.parameters())
+
+                    # create pipeline
+                    vae = AutoencoderKL.from_pretrained(
+                        vae_path,
+                        subfolder=("vae" if args["pretrained_vae_model_name_or_path"] is None else None),
+                        revision=args["revision"],
+                        variant=args["variant"],
+                    )
+                    pipeline = GaudiStableDiffusionXLPipeline.from_pretrained(
+                        args["pretrained_model_name_or_path"],
+                        vae=vae,
+                        unet=unwrap_model(unet),
+                        revision=args["revision"],
+                        variant=args["variant"],
+                        use_habana=True,
+                        use_hpu_graphs=args["use_hpu_graphs_for_inference"],
+                        gaudi_config=args["gaudi_config_name"],
+                    )
+                    if args["prediction_type"] is not None:
+                        scheduler_args = {"prediction_type": args["prediction_type"]}
+                        pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
+                    pipeline.scheduler = GaudiEulerDiscreteScheduler.from_config(pipeline.scheduler.config)
+                    pipeline = pipeline.to(accelerator.device)
+                    pipeline.set_progress_bar_config(disable=True)
+
+                    # run inference
+                    generator = torch.Generator(device="cpu").manual_seed(args["seed"]) if args["seed"] else None
+                    pipeline_args = {"prompt": args["validation_prompt"]}
+
+                    with torch.autocast(
+                        device_type="hpu",
+                        dtype=torch.bfloat16,
+                        enabled=gaudi_config.use_torch_autocast,
+                    ):
+                        images = [
+                            pipeline(**pipeline_args, generator=generator, num_inference_steps=25).images[0]
+                            for _ in range(args["num_validation_images"])
+                        ]
+
+                    for tracker in accelerator.trackers:
+                        if tracker.name == "tensorboard":
+                            np_images = np.stack([np.asarray(img) for img in images])
+                            tracker.writer.add_images("validation", np_images, epoch, dataformats="NHWC")
+                        # if tracker.name == "wandb":
+                        #     tracker.log(
+                        #         {
+                        #             "validation": [
+                        #                 wandb.Image(image, caption=f"{i}: {args["validation_prompt"]}")
+                        #                 for i, image in enumerate(images)
+                        #             ]
+                        #         }
+                        #     )
+
+                    del pipeline
+                
+        if t0 is not None:
+            duration = time.perf_counter() - t0 - (checkpoint_time if args["adjust_throughput"] else 0)
+            ttt = time.perf_counter() - t_start
+            throughput = (args["max_train_steps"] - args["throughput_warmup_steps"]) * total_batch_size / duration
+
+            accelerator.wait_for_everyone()
+            if accelerator.is_main_process:
+                logger.info(f"Throughput = {throughput} samples/s")
+                logger.info(f"Train runtime = {duration} seconds")
+                logger.info(f"Total Train runtime = {ttt} seconds")
+                metrics = {
+                    "train_samples_per_second": throughput,
+                    "train_runtime": duration,
+                }
+                with open(f"{args['output_dir']}/speed_metrics.json", mode="w") as file:
+                    json.dump(metrics, file)
+
+            unet = accelerator.unwrap_model(unet)
+            if args["use_ema"]:
+                ema_unet.copy_to(unet.parameters())
+
+            # Serialize pipeline.
+            vae = AutoencoderKL.from_pretrained(
+                vae_path,
+                subfolder="vae" if args["pretrained_vae_model_name_or_path"] is None else None,
+                revision=args["revision"],
+                variant=args["variant"],
+                torch_dtype=weight_dtype,
+            )
+            pipeline = GaudiStableDiffusionXLPipeline.from_pretrained(
+                args["pretrained_model_name_or_path"],
+                unet=unet,
+                vae=vae,
+                revision=args["revision"],
+                variant=args["variant"],
+                torch_dtype=weight_dtype,
+                scheduler=noise_scheduler,
+                use_habana=True,
+                use_hpu_graphs=args["use_hpu_graphs_for_inference"],
+                gaudi_config=args["gaudi_config_name"],
+            )
+            if args["prediction_type"] is not None:
+                scheduler_args = {"prediction_type": args["prediction_type"]}
+                pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
+            pipeline.save_pretrained(args["output_dir"])
+
+            # run inference
+            images = []
+            if args["validation_prompt"] and args["num_validation_images"] > 0:
+                pipeline = pipeline.to(accelerator.device)
+                generator = torch.Generator(device="cpu").manual_seed(args["seed"]) if args["seed"] else None
+                with torch.autocast(
+                    device_type="hpu",
+                    dtype=weight_dtype,
+                    enabled=gaudi_config.use_torch_autocast,
+                ):
+                    images = [
+                        pipeline(
+                            args["validation_prompt"],
+                            num_inference_steps=25,
+                            generator=generator,
+                        ).images[0]
+                        for _ in range(args["num_validation_images"])
+                    ]
+                # Save images in the specified directory if not None and if they are in PIL format
+                if args["image_save_dir"] is not None:
+                    if args["output_type"] == "pil":
+                        image_save_dir = Path(args["image_save_dir"])
+                        image_save_dir.mkdir(parents=True, exist_ok=True)
+                        logger.info(f"Saving images in {image_save_dir.resolve()}...")
+                        for i, image in enumerate(images):
+                            image.save(image_save_dir / f"image_{epoch}_{i+1}.png")
+                    else:
+                        logger.warning("--output_type should be equal to 'pil' to save images in --image_save_dir.")
+
+                # for tracker in accelerator.trackers:
+                #     if tracker.name == "tensorboard":
+                #         np_images = np.stack([np.asarray(img) for img in images])
+                #         tracker.writer.add_images("test", np_images, epoch, dataformats="NHWC")
+                #     if tracker.name == "wandb":
+                #         tracker.log(
+                #             {
+                #                 "test": [
+                #                     wandb.Image(image, caption=f"{i}: {args["validation_prompt"]}")
+                #                     for i, image in enumerate(images)
+                #                 ]
+                #             }
+                #         )
+
+            if args["push_to_hub"]:
+                save_model_card(
+                    repo_id=repo_id,
+                    images=images,
+                    validation_prompt=args["validation_prompt"],
+                    base_model=args["pretrained_model_name_or_path"],
+                    dataset_name=args["dataset_name"],
+                    repo_folder=args["output_dir"],
+                    vae_path=args["pretrained_vae_model_name_or_path"],
+                )
+                upload_folder(
+                    repo_id=repo_id,
+                    folder_path=args["output_dir"],
+                    commit_message="End of training",
+                    ignore_patterns=["step_*", "epoch_*"],
+                )
+
+        accelerator.end_training()
 
 
 if __name__ == "__main__":

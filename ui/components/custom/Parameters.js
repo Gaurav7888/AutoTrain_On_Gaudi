@@ -93,8 +93,9 @@ export default function Parameters({ projectData, onDataChange }) {
         sx={{
           display: "flex",
           flexDirection: "row",
-          justifyContent: "space-between",
+          justifyContent: "center",
           alignItems: "center",
+          gap: "2rem",
         }}
       >
         <Typography variant="h6" my={2}>
