@@ -40,7 +40,7 @@ export const tasksOpts = [
     color: "#0096c7",
     options: [
       {
-        value: "image-generation",
+        value: "dreambooth",
         label: "Image Generation",
         borderColor: "#ade8f4",
         enabled: false,
