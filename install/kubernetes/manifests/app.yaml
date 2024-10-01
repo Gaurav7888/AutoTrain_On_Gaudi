@@ -3,45 +3,52 @@ kind: Namespace
 metadata:
   name: fine-tuning
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  labels:
-    app: fine-tuning
   name: fine-tuning
   namespace: fine-tuning
 spec:
-  containers:
-  - env:
-    - name: http_proxy
-      value: http://proxy01.iind.intel.com:911/
-    - name: https_proxy
-      value: http://proxy01.iind.intel.com:912/
-    - name: no_proxy
-      value: 127.0.0.1,localhost
-    - name: HUGGING_FACE_HUB_TOKEN
-      value: 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
-    image: gar-registry.caas.intel.com/aice/fine-tuning:latest
-    name: habana-container
-    resources:
-      limits:
-        habana.ai/gaudi: 1
-      requests:
-        habana.ai/gaudi: 1
-    securityContext:
-      capabilities:
-        add:
-        - SYS_NICE
-    volumeMounts:
-    - mountPath: /data
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fine-tuning
+  template:
+    metadata:
+      labels:
+        app: fine-tuning
+  spec:
+    containers:
+    - env:
+      - name: http_proxy
+        value: http://proxy01.iind.intel.com:911/
+      - name: https_proxy
+        value: http://proxy01.iind.intel.com:912/
+      - name: no_proxy
+        value: 127.0.0.1,localhost
+      - name: HUGGING_FACE_HUB_TOKEN
+        value: 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
+      image: gar-registry.caas.intel.com/aice/fine-tuning:latest
+      name: habana-container
+      resources:
+        limits:
+          habana.ai/gaudi: 1
+        requests:
+          habana.ai/gaudi: 1
+      securityContext:
+        capabilities:
+          add:
+          - SYS_NICE
+      volumeMounts:
+      - mountPath: /data
+        name: model-volume
+      workingDir: /root
+    hostIPC: true
+    runtimeClassName: habana
+    volumes:
+    - hostPath:
+        path: /home/intel/.cache/huggingface/hub
       name: model-volume
-    workingDir: /root
-  hostIPC: true
-  runtimeClassName: habana
-  volumes:
-  - hostPath:
-      path: /home/intel/.cache/huggingface/hub
-    name: model-volume
 ---
 apiVersion: v1
 kind: Service
