@@ -16,7 +16,7 @@ const ShowDetails = ({ task, config, projectName, datasetName, isSaved }) => {
 
   const fetchMarkdownContent = async () => {
     try {
-      let url = SERVER_URL + `/ui/get_markdown`;
+      let url = SERVER_URL + `/get_markdown`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Network response was not ok");
@@ -30,7 +30,7 @@ const ShowDetails = ({ task, config, projectName, datasetName, isSaved }) => {
 
   const handleShowDetails = () => {
     console.log("Details are being shown");
-    let url = SERVER_URL + `/ui/create_project`;
+    let url = SERVER_URL + `/create_project`;
     let payload = {
       task: task || "llm:sft", // Ensure this is a string
       params: config || {}, // Ensure this is an object

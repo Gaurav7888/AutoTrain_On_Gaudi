@@ -11,7 +11,7 @@ const Logs = ({ hostingServerType, projectData }) => {
    const sseRef = useRef(null);
 
   useEffect(() => {
-    const url = `${SERVER_URL}/ui/stream_logs`;
+    const url = `${SERVER_URL}/stream_logs`;
     sseRef.current = new EventSource(url);
 
     sseRef.current.onmessage = (e) => {

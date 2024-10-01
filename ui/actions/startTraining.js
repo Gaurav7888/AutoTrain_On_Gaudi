@@ -3,7 +3,7 @@ import axios from "axios";
 
 export const handleStartTraining = (projectData) => {
   
-  let url = `${SERVER_URL}/ui/run_training`;
+  let url = `${SERVER_URL}/run_training`;
   // let payload = {
   //   task: projectData.task,
   //   params: projectData.config,

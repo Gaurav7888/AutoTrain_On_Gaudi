@@ -1,2 +1,2 @@
-export const SERVER_URL = "http://g2-r2-2.iind.intel.com:31009"
-// export const SERVER_URL = "http://localhost:8080"
+export const SERVER_URL =
+  process.env.NODE_ENV === "production" ? "" : "http://localhost:8000";

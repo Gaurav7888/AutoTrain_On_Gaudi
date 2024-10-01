@@ -22,7 +22,7 @@ export default function ModelSelection({ projectData, onDataChange }) {
       if (projectData.task) {
         try {
           const response = await axios.get(
-            `${SERVER_URL}/ui/model_choices/${projectData.task}`
+            `${SERVER_URL}/model_choices/${projectData.task}`
           );
           setModelChoice(response.data);
           setLoading(false);

@@ -20,7 +20,7 @@ export default function Parameters({ projectData, onDataChange }) {
       if (projectData.task && projectData.parameterType) {
         try {
           const response = await axios.get(
-            `${SERVER_URL}/ui/params/${projectData.task}/${projectData.parameterType}`
+            `${SERVER_URL}/params/${projectData.task}/${projectData.parameterType}`
           );
           const sanitizedParams = sanitizeParams(response.data);
           setParams(sanitizedParams);
