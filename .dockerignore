@@ -13,3 +13,8 @@ op_*
 *.db
 autotrain-data*
 autotrain-*
+ui/build/
+ui/node_modules/
+ui/.next/
+ui/dist/
+ui/package-lock.json
