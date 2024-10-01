@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function fetchParams() {
         const taskValue = document.getElementById('task').value;
         const parameterMode = document.getElementById('parameter_mode').value;
-        const response = await fetch(`/ui/params/${taskValue}/${parameterMode}`);
+        const response = await fetch(`/params/${taskValue}/${parameterMode}`);
         const params = await response.json();
         return params;
     }

@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const baseModelInput = document.getElementById('base_model_input');
         const baseModelCheckbox = document.getElementById('base_model_checkbox');
 
-        let fetchURL = `/ui/model_choices/${taskValue}`;
+        let fetchURL = `/model_choices/${taskValue}`;
         if (customModelsValue) {
             fetchURL += `?custom_models=${customModelsValue}`;
         }

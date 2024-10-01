@@ -28,17 +28,20 @@ app.add_middleware(
 if "SPACE_ID" in os.environ:
     attach_oauth(app)
 
-app.include_router(ui_router, prefix="/ui")
-app.include_router(api_router, prefix="/api")
+
+app.mount("/api", api_router)
+app.mount("/", ui_router)
+# app.include_router(ui_router, prefix="/ui")
+# app.include_router(api_router, prefix="/api")
 static_path = os.path.join(BASE_DIR, "static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 logger.info(f"AutoTrain version: {__version__}")
 logger.info("AutoTrain started successfully")
 
-@app.get("/")
-async def forward_to_ui(request: Request):
-    query_params = request.query_params
-    url = "/ui/"
-    if query_params:
-        url += f"?{query_params}"
-    return RedirectResponse(url=url)
+# @app.get("/")
+# async def forward_to_ui(request: Request):
+#     query_params = request.query_params
+#     url = "/ui/"
+#     if query_params:
+#         url += f"?{query_params}"
+#     return RedirectResponse(url=url)

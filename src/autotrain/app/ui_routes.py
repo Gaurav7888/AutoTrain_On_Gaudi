@@ -15,6 +15,8 @@ from fastapi.templating import Jinja2Templates
 from huggingface_hub import repo_exists
 from sse_starlette.sse import EventSourceResponse
 #from nvitop import Device
+from pathlib import Path
+from fastapi.responses import StreamingResponse
 
 from autotrain import __version__, logger
 from autotrain.app.db import AutoTrainDB
@@ -42,6 +44,7 @@ ENABLE_NVCF = int(os.environ.get("ENABLE_NVCF", 0))
 AUTOTRAIN_LOCAL = int(os.environ.get("AUTOTRAIN_LOCAL", 1))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TRAINERS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "trainers"))
+UI_OUT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "ui", "out"))
 DB = AutoTrainDB("autotrain.db")
 MODEL_CHOICE = fetch_models()
 
@@ -503,31 +506,31 @@ def user_authentication(request: Request):
     )
 
 
-@ui_router.get("/", response_class=HTMLResponse)
-async def load_index(request: Request, token: str = Depends(user_authentication)):
-    """
-    This function is used to load the index page
-    :return: HTMLResponse
-    """
-    if os.environ.get("SPACE_ID") == "autotrain-projects/autotrain-advanced":
-        return templates.TemplateResponse("duplicate.html", {"request": request})
-    try:
-        _users = get_user_and_orgs(user_token=token)
-    except Exception as e:
-        logger.error(f"Failed to get user and orgs: {e}")
-        if "oauth_info" in request.session:
-            request.session.pop("oauth_info", None)
-        return templates.TemplateResponse("login.html", {"request": request})
-    context = {
-        "request": request,
-        "valid_users": _users,
-        "enable_ngc": ENABLE_NGC,
-        "enable_nvcf": ENABLE_NVCF,
-        "enable_local": AUTOTRAIN_LOCAL,
-        "version": __version__,
-        "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-    }
-    return templates.TemplateResponse("index.html", context)
+# @ui_router.get("/", response_class=HTMLResponse)
+# async def load_index(request: Request, token: str = Depends(user_authentication)):
+#     """
+#     This function is used to load the index page
+#     :return: HTMLResponse
+#     """
+#     if os.environ.get("SPACE_ID") == "autotrain-projects/autotrain-advanced":
+#         return templates.TemplateResponse("duplicate.html", {"request": request})
+#     try:
+#         _users = get_user_and_orgs(user_token=token)
+#     except Exception as e:
+#         logger.error(f"Failed to get user and orgs: {e}")
+#         if "oauth_info" in request.session:
+#             request.session.pop("oauth_info", None)
+#         return templates.TemplateResponse("login.html", {"request": request})
+#     context = {
+#         "request": request,
+#         "valid_users": _users,
+#         "enable_ngc": ENABLE_NGC,
+#         "enable_nvcf": ENABLE_NVCF,
+#         "enable_local": AUTOTRAIN_LOCAL,
+#         "version": __version__,
+#         "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+#     }
+#     return templates.TemplateResponse("../../../ui/out/index.html", context)
 
 
 @ui_router.get("/logout", response_class=HTMLResponse)
@@ -1024,3 +1027,19 @@ async def stop_training(authenticated: bool = Depends(user_authentication)):
                 logger.info(f"Process {_pid} is already completed. Skipping...")
         return {"success": True}
     return {"success": False}
+
+
+@ui_router.api_route("/{path_name:path}", methods=["GET"])
+async def serve_ui(req: Request, path_name: str):
+    reqURL = req.url.path
+    # cur_dir = os.getcwd()
+    # out_path = os.abspath(os.path.join(cur_dir, "..", "..", "..", "ui", "out"))
+    print("\n\n\n", UI_OUT)
+
+    if (path_name == "/" or path_name == ""):
+        path_name = "index.html"
+    elif (Path(path_name).suffix == ""):
+        path_name = path_name+".html"
+    return StreamingResponse(open(f"{UI_OUT}/{path_name}", "rb"))
+# # /home/thebeginner86/code/AutoTrain_On_Gaudi/src/autotrain/app/ui_routes.py
+# # /home/thebeginner86/code/AutoTrain_On_Gaudi/ui/out

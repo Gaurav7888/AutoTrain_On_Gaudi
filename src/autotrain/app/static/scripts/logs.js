@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to fetch logs from the server
     function fetchLogs() {
-        fetch('/ui/logs')
+        fetch('/logs')
             .then(response => response.json())
             .then(data => {
                 var logContainer = document.getElementById('logContent');
